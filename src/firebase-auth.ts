@@ -57,7 +57,7 @@ export async function signOutFromFirebase() {
   }
 }
 
-// Sync Firebase Auth state with TeenWork session
+// Sync Firebase Auth state with Vibe Working session
 onAuthStateChanged(auth, (firebaseUser) => {
   if (firebaseUser) {
     if (typeof (window as any).syncFirebaseUser === 'function') {
