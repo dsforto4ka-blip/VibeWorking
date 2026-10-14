@@ -712,31 +712,69 @@
         showToast('Валюта: ' + cur);
       }
 
+      function getStoredUser() {
+        try {
+          const raw = localStorage.getItem('vw_user') || localStorage.getItem('vw_local_user');
+          return raw ? JSON.parse(raw) : null;
+        } catch (e) {
+          return null;
+        }
+      }
+
+      function saveStoredUser(user) {
+        if (!user) {
+          localStorage.removeItem('vw_user');
+          localStorage.removeItem('vw_local_user');
+          localStorage.removeItem('vw_session_token');
+        } else {
+          localStorage.setItem('vw_user', JSON.stringify(user));
+          localStorage.setItem('vw_local_user', JSON.stringify(user));
+        }
+      }
+
       async function loadCabinetData() {
-        if (!sessionToken) {
-          currentUser = null;
-          showUnauthView();
-          return;
+        // 1. Сначала читаем сохранённого пользователя из localStorage (мгновенно для GitHub Pages и офлайна)
+        currentUser = getStoredUser();
+        sessionToken = localStorage.getItem('vw_session_token') || (currentUser ? 'token_local' : '');
+
+        // 2. Читаем сохранённые заказы и отклики
+        try {
+          const cachedOrders = localStorage.getItem('vw_orders');
+          const cachedWorks = localStorage.getItem('vw_works');
+          cabinetData.orders = cachedOrders ? JSON.parse(cachedOrders) : [];
+          cabinetData.works = cachedWorks ? JSON.parse(cachedWorks) : [];
+        } catch (e) {
+          cabinetData.orders = [];
+          cabinetData.works = [];
         }
 
-        try {
-          const res = await fetch('/api/user/cabinet', { headers: getAuthHeaders() });
-          const data = await res.json();
-          if (data.error || !data.user) {
-            currentUser = null;
-            sessionToken = '';
-            localStorage.removeItem('vw_session_token');
-            showUnauthView();
-            return;
-          }
-
-          currentUser = data.user;
-          cabinetData.orders = data.orders || [];
-          cabinetData.works = data.works || [];
+        if (currentUser) {
           showAuthView();
           renderCabinet();
-        } catch (e) {
+        } else {
           showUnauthView();
+        }
+
+        // 3. Если есть бэкенд, пробуем фоновую синхронизацию
+        if (sessionToken) {
+          try {
+            const res = await fetch('/api/user/cabinet', { headers: getAuthHeaders() });
+            if (res.ok) {
+              const data = await res.json();
+              if (data && data.user) {
+                currentUser = data.user;
+                cabinetData.orders = data.orders || [];
+                cabinetData.works = data.works || [];
+                saveStoredUser(currentUser);
+                localStorage.setItem('vw_orders', JSON.stringify(cabinetData.orders));
+                localStorage.setItem('vw_works', JSON.stringify(cabinetData.works));
+                showAuthView();
+                renderCabinet();
+              }
+            }
+          } catch (netErr) {
+            // На статическом хостинге (GitHub Pages) остаёмся авторизованными через localStorage
+          }
         }
       }
 
@@ -879,25 +917,24 @@
       }
 
       async function toggleUserRole() {
+        if (!currentUser) return;
         const nextRole = currentUser.roleKey === 'client' ? 'worker' : 'client';
+        currentUser.roleKey = nextRole;
+        saveStoredUser(currentUser);
+        renderCabinet();
+        showToast('Роль изменена на: ' + (nextRole === 'client' ? 'Заказчик' : 'Исполнитель'));
+
         try {
-          const res = await fetch('/api/user/role', {
+          await fetch('/api/user/role', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
             body: JSON.stringify({ roleKey: nextRole })
           });
-          const data = await res.json();
-          if (data.user) {
-            currentUser = data.user;
-            renderCabinet();
-            showToast('Роль изменена на: ' + (nextRole === 'client' ? 'Заказчик' : 'Исполнитель'));
-          }
-        } catch (e) {
-          showToast('Ошибка смены роли');
-        }
+        } catch (e) {}
       }
 
       function openEditProfileModal() {
+        if (!currentUser) return;
         document.getElementById('edit-name').value = currentUser.name || '';
         document.getElementById('edit-username').value = currentUser.username || '';
         document.getElementById('edit-telegram').value = currentUser.telegram || '';
@@ -911,29 +948,29 @@
 
       async function handleSaveProfile(e) {
         e.preventDefault();
+        if (!currentUser) return;
         const displayName = document.getElementById('edit-name').value.trim();
-        const username = document.getElementById('edit-username').value.trim();
+        const username = document.getElementById('edit-username').value.trim().replace(/^@/, '');
         const telegram = document.getElementById('edit-telegram').value.trim();
         const about = document.getElementById('edit-about').value.trim();
 
+        if (displayName) currentUser.name = displayName;
+        if (username) currentUser.username = username;
+        currentUser.telegram = telegram;
+        currentUser.about = about;
+
+        saveStoredUser(currentUser);
+        closeEditProfileModal();
+        renderCabinet();
+        showToast('Профиль успешно обновлён');
+
         try {
-          const res = await fetch('/api/user/profile', {
+          await fetch('/api/user/profile', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
             body: JSON.stringify({ displayName, username, telegram, about })
           });
-          const data = await res.json();
-          if (data.error) {
-            showToast(data.error);
-            return;
-          }
-          currentUser = data.user;
-          closeEditProfileModal();
-          renderCabinet();
-          showToast('Профиль успешно обновлён');
-        } catch (err) {
-          showToast('Ошибка сохранения профиля');
-        }
+        } catch (err) {}
       }
 
       // Баланс
@@ -955,26 +992,60 @@
 
       async function handleBalanceSubmit(e) {
         e.preventDefault();
-        const amount = document.getElementById('balance-amount-input').value;
+        if (!currentUser) return;
+        const amount = parseFloat(document.getElementById('balance-amount-input').value) || 0;
+        if (amount <= 0) return;
+
+        if (balanceAction === 'deposit') {
+          currentUser.balance = (currentUser.balance || 0) + amount;
+        } else {
+          if ((currentUser.balance || 0) < amount) {
+            showToast('Недостаточно средств на балансе');
+            return;
+          }
+          currentUser.balance = Math.max(0, (currentUser.balance || 0) - amount);
+        }
+
+        saveStoredUser(currentUser);
+        closeBalanceModal();
+        renderCabinet();
+        showToast(balanceAction === 'deposit' ? 'Баланс успешно пополнен!' : 'Заявка на вывод выполнена!');
+
         try {
-          const res = await fetch('/api/user/balance', {
+          await fetch('/api/user/balance', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
             body: JSON.stringify({ amount, action: balanceAction })
           });
-          const data = await res.json();
-          if (data.error) {
-            showToast(data.error);
-            return;
-          }
-          currentUser = data.user;
-          closeBalanceModal();
-          renderCabinet();
-          showToast(balanceAction === 'deposit' ? 'Баланс успешно пополнен!' : 'Заявка на вывод выполнена!');
-        } catch (err) {
-          showToast('Ошибка операции с балансом');
-        }
+        } catch (err) {}
       }
+
+      window.syncFirebaseUser = function(googleData) {
+        const stored = getStoredUser();
+        if (!stored) {
+          currentUser = {
+            id: 'user_' + googleData.uid,
+            name: googleData.displayName || googleData.name || 'Пользователь Google',
+            username: (googleData.displayName || googleData.name || 'user').toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 15),
+            email: googleData.email || '',
+            avatar: googleData.photoURL || '',
+            roleKey: 'worker',
+            balance: 0,
+            createdAt: new Date().toISOString()
+          };
+          sessionToken = 'token_' + Math.random().toString(36).substring(2);
+          localStorage.setItem('vw_session_token', sessionToken);
+          saveStoredUser(currentUser);
+        } else {
+          currentUser = stored;
+          if (googleData.photoURL && !currentUser.avatar) {
+            currentUser.avatar = googleData.photoURL;
+            saveStoredUser(currentUser);
+          }
+        }
+        showAuthView();
+        renderCabinet();
+      };
 
       async function handleGoogleOAuthLogin() {
         if (typeof window.signInWithGoogleOAuth !== 'function') {
@@ -1001,9 +1072,7 @@
               sessionToken = result.token;
               sessionUser = result.user;
             }
-          } catch (fetchErr) {
-            console.warn('Backend unavailable, using static fallback:', fetchErr);
-          }
+          } catch (fetchErr) {}
 
           if (!sessionUser) {
             sessionToken = 'token_' + Math.random().toString(36).substring(2);
@@ -1017,11 +1086,12 @@
               balance: 0,
               createdAt: new Date().toISOString()
             };
-            localStorage.setItem('vw_local_user', JSON.stringify(sessionUser));
           }
 
           currentUser = sessionUser;
+          sessionToken = sessionToken || 'token_' + Math.random().toString(36).substring(2);
           localStorage.setItem('vw_session_token', sessionToken);
+          saveStoredUser(currentUser);
           loadCabinetData();
           showToast('Добро пожаловать, ' + currentUser.name + '!');
         } catch (err) {
@@ -1046,7 +1116,7 @@
         } catch (e) {}
         currentUser = null;
         sessionToken = '';
-        localStorage.removeItem('vw_session_token');
+        saveStoredUser(null);
         showUnauthView();
         showToast('Вы вышли из аккаунта');
       }

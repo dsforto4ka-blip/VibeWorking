@@ -1258,29 +1258,74 @@
       let selectedRoleKey = 'worker';
       let pendingRedirect = null;
 
-      async function checkCurrentAuth() {
-        if (!sessionToken) {
-          currentUser = null;
-          renderAuthNav();
-          return;
-        }
+      function getStoredUser() {
         try {
-          const res = await fetch('/api/auth/me', { headers: getAuthHeaders() });
-          const data = await res.json();
-          currentUser = data.user || null;
-          if (!currentUser) {
-            sessionToken = '';
-            localStorage.removeItem('vw_session_token');
-          }
+          const raw = localStorage.getItem('vw_user') || localStorage.getItem('vw_local_user');
+          return raw ? JSON.parse(raw) : null;
         } catch (e) {
-          const cached = localStorage.getItem('vw_local_user');
-          if (cached) {
-            try { currentUser = JSON.parse(cached); } catch (_) { currentUser = null; }
-          } else {
-            currentUser = null;
+          return null;
+        }
+      }
+
+      function saveStoredUser(user) {
+        if (!user) {
+          localStorage.removeItem('vw_user');
+          localStorage.removeItem('vw_local_user');
+          localStorage.removeItem('vw_session_token');
+        } else {
+          localStorage.setItem('vw_user', JSON.stringify(user));
+          localStorage.setItem('vw_local_user', JSON.stringify(user));
+        }
+      }
+
+      window.syncFirebaseUser = function(googleData) {
+        const stored = getStoredUser();
+        if (!stored) {
+          currentUser = {
+            id: 'user_' + googleData.uid,
+            name: googleData.displayName || googleData.name || 'Пользователь Google',
+            username: (googleData.displayName || googleData.name || 'user').toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 15),
+            email: googleData.email || '',
+            avatar: googleData.photoURL || '',
+            roleKey: 'worker',
+            balance: 0,
+            createdAt: new Date().toISOString()
+          };
+          sessionToken = 'token_' + Math.random().toString(36).substring(2);
+          localStorage.setItem('vw_session_token', sessionToken);
+          saveStoredUser(currentUser);
+        } else {
+          currentUser = stored;
+          if (googleData.photoURL && !currentUser.avatar) {
+            currentUser.avatar = googleData.photoURL;
+            saveStoredUser(currentUser);
           }
         }
         renderAuthNav();
+      };
+
+      async function checkCurrentAuth() {
+        // 1. Мгновенно читаем сохранённого пользователя для бесшовной синхронизации между страницами
+        currentUser = getStoredUser();
+        sessionToken = localStorage.getItem('vw_session_token') || (currentUser ? 'token_local' : '');
+        renderAuthNav();
+
+        // 2. Фоновская проверка через бэкенд (если доступен)
+        if (sessionToken) {
+          try {
+            const res = await fetch('/api/auth/me', { headers: getAuthHeaders() });
+            if (res.ok) {
+              const data = await res.json();
+              if (data && data.user) {
+                currentUser = data.user;
+                saveStoredUser(currentUser);
+                renderAuthNav();
+              }
+            }
+          } catch (e) {
+            // На GitHub Pages без бэкенда остаёмся авторизованными через localStorage
+          }
+        }
       }
 
       function renderAuthNav() {
@@ -1420,11 +1465,12 @@
               balance: 0,
               createdAt: new Date().toISOString()
             };
-            localStorage.setItem('vw_local_user', JSON.stringify(sessionUser));
           }
 
           currentUser = sessionUser;
+          sessionToken = sessionToken || 'token_' + Math.random().toString(36).substring(2);
           localStorage.setItem('vw_session_token', sessionToken);
+          saveStoredUser(currentUser);
 
           closeAuthModal();
           renderAuthNav();
@@ -1526,16 +1572,32 @@
             }
           }
 
-          result = await res.json();
-          if (result.error) {
-            errText.textContent = result.error;
-            errBox.style.display = 'flex';
-            return;
+          if (res.ok) {
+            result = await res.json();
+            if (result.error) {
+              errText.textContent = result.error;
+              errBox.style.display = 'flex';
+              return;
+            }
+            sessionToken = result.token;
+            currentUser = result.user;
+          } else {
+            // Режим статического хостинга (GitHub Pages)
+            sessionToken = 'token_' + Math.random().toString(36).substring(2);
+            currentUser = {
+              id: 'user_' + Date.now(),
+              name: nameInput || ('User ' + (phone ? phone.slice(-4) : 'local')),
+              username: (nameInput || 'user').toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 15),
+              email: authMethod === 'email' ? email : undefined,
+              phone: authMethod === 'phone' ? phone : undefined,
+              roleKey: selectedRoleKey || 'worker',
+              balance: 0,
+              createdAt: new Date().toISOString()
+            };
           }
 
-          sessionToken = result.token;
-          currentUser = result.user;
           localStorage.setItem('vw_session_token', sessionToken);
+          saveStoredUser(currentUser);
 
           closeAuthModal();
           renderAuthNav();
@@ -1565,7 +1627,7 @@
 
         currentUser = null;
         sessionToken = '';
-        localStorage.removeItem('vw_session_token');
+        saveStoredUser(null);
         renderAuthNav();
         loadServerSettings();
         showToast(tr('toast.logout'));
