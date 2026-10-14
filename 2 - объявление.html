@@ -3,6 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- МГНОВЕННОЕ ВОССТАНОВЛЕНИЕ НАСТРОЕК (БЕЗ МЕРЦАНИЯ ПРИ ПЕРЕЗАГРУЗКЕ) -->
+    <script>
+      (function() {
+        try {
+          var s = localStorage.getItem('vw_settings');
+          if (s) {
+            var p = JSON.parse(s);
+            if (p.theme) document.documentElement.setAttribute('data-theme', p.theme);
+            if (p.lang) document.documentElement.lang = p.lang;
+          }
+        } catch(e) {}
+      })();
+    </script>
     <title>Разместить заказ — Vibe Working</title>
     <meta name="description" content="Разместите задание на бирже микрозадач для подростков Vibe Working без бюрократии и договоров." />
     <meta property="og:title" content="Разместить заказ — Vibe Working" />
@@ -391,11 +404,17 @@
           <span class="logo-dot"></span>
         </a>
 
-        <nav style="display: flex; align-items: center; gap: 18px;">
+        <nav style="display: flex; align-items: center; gap: 14px;">
           <ul class="nav-menu">
-            <li><a href="index.html#tasks" class="nav-link">Задания</a></li>
-            <li><a href="index.html#how-it-works" class="nav-link">Как это работает</a></li>
+            <li><a href="index.html#tasks" class="nav-link" data-i18n="nav.tasks">Задания</a></li>
+            <li><a href="index.html#how-it-works" class="nav-link" data-i18n="nav.how">Как это работает</a></li>
           </ul>
+          <button type="button" class="btn-logout-small" onclick="openSettingsModal()" title="Настройки" style="margin-right: 2px;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </button>
           <div class="auth-nav-container" id="auth-nav-container"></div>
         </nav>
       </div>
@@ -408,7 +427,7 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="15 18 9 12 15 6"></polyline>
           </svg>
-          Вернуться к ленте заданий
+          <span data-i18n="nav.backToTasks">Вернуться к ленте заданий</span>
         </a>
 
         <div class="page-header">
@@ -418,10 +437,10 @@
               <line x1="12" y1="8" x2="12" y2="16"></line>
               <line x1="8" y1="12" x2="16" y2="12"></line>
             </svg>
-            Публикация заказа
+            <span data-i18n="post.badge">Публикация заказа</span>
           </div>
-          <h1 class="page-title">Разместить заказ на Vibe Working</h1>
-          <p class="page-subtitle">
+          <h1 class="page-title" data-i18n="post.title">Разместить заказ на Vibe Working</h1>
+          <p class="page-subtitle" data-i18n="post.subtitle">
             Опишите простую онлайн-задачу, установите понятную цену и получите отклики от подростков-исполнителей уже через пару минут без бумажных договоров.
           </p>
         </div>
@@ -430,44 +449,45 @@
           <form id="create-task-form" onsubmit="handleCreateTask(event)">
             <!-- КАТЕГОРИЯ -->
             <div class="form-section">
-              <label class="form-label">Выберите категорию <span>*</span></label>
+              <label class="form-label"><span data-i18n="post.categoryLabel">Выберите категорию</span> <span>*</span></label>
               <div class="category-grid" id="category-selector">
                 <div class="cat-chip selected" data-cat="тексты" onclick="selectCategory('тексты')">
                   <span class="cat-icon">✍️</span>
-                  <span>Тексты</span>
+                  <span data-i18n="post.catTexts">Тексты</span>
                 </div>
                 <div class="cat-chip" data-cat="дизайн" onclick="selectCategory('дизайн')">
                   <span class="cat-icon">🎨</span>
-                  <span>Дизайн</span>
+                  <span data-i18n="post.catDesign">Дизайн</span>
                 </div>
                 <div class="cat-chip" data-cat="видео" onclick="selectCategory('видео')">
                   <span class="cat-icon">🎬</span>
-                  <span>Видео / Reels</span>
+                  <span data-i18n="post.catVideo">Видео / Reels</span>
                 </div>
                 <div class="cat-chip" data-cat="учеба" onclick="selectCategory('учеба')">
                   <span class="cat-icon">📚</span>
-                  <span>Учёба</span>
+                  <span data-i18n="post.catStudy">Учёба</span>
                 </div>
                 <div class="cat-chip" data-cat="таблицы" onclick="selectCategory('таблицы')">
                   <span class="cat-icon">📊</span>
-                  <span>Таблицы</span>
+                  <span data-i18n="post.catTables">Таблицы</span>
                 </div>
                 <div class="cat-chip" data-cat="соцсети" onclick="selectCategory('соцсети')">
                   <span class="cat-icon">📱</span>
-                  <span>Соцсети</span>
+                  <span data-i18n="post.catSocial">Соцсети</span>
                 </div>
               </div>
             </div>
 
             <!-- НАЗВАНИЕ -->
             <div class="form-section">
-              <label class="form-label" for="task-title-input">Название задания <span>*</span></label>
+              <label class="form-label" for="task-title-input"><span data-i18n="post.titleLabel">Название задания</span> <span>*</span></label>
               <div class="form-hint">Коротко и ясно сформулируйте суть задачи</div>
               <input
                 type="text"
                 id="task-title-input"
                 class="form-control"
                 placeholder="Например: Смонтировать 3 коротких Reels для магазина кроссовок"
+                data-i18n-placeholder="post.titlePlaceholder"
                 required
                 maxlength="120"
               />
@@ -475,7 +495,7 @@
 
             <!-- БЮДЖЕТ -->
             <div class="form-section">
-              <label class="form-label" for="task-budget-input">Бюджет вознаграждения <span>*</span></label>
+              <label class="form-label" for="task-budget-input"><span data-i18n="post.budgetLabel">Бюджет вознаграждения</span> <span>*</span></label>
               <div class="form-hint">Укажите сумму, которую исполнитель получит за выполненную работу</div>
               <div class="budget-row">
                 <div class="budget-input-wrapper">
@@ -484,13 +504,13 @@
                     id="task-budget-input"
                     class="form-control"
                     placeholder="1500"
-                    min="100"
-                    step="50"
+                    min="10"
+                    step="10"
                     required
                   />
                 </div>
-                <select id="task-currency-select" class="currency-select">
-                  <option value="RUB">₽ Рубли</option>
+                <select id="task-currency-select" class="currency-select" onchange="handleTaskCurrencyChange(this.value)">
+                  <option value="RUB">₽ RUB</option>
                   <option value="USD">$ USD</option>
                   <option value="EUR">€ EUR</option>
                   <option value="BYN">Br BYN</option>
@@ -500,12 +520,13 @@
 
             <!-- ОПИСАНИЕ -->
             <div class="form-section">
-              <label class="form-label" for="task-desc-input">Подробное описание <span>*</span></label>
+              <label class="form-label" for="task-desc-input"><span data-i18n="post.descLabel">Подробное описание</span> <span>*</span></label>
               <div class="form-hint">Опишите требования, формат сдачи работы, дедлайн и что вы предоставите</div>
               <textarea
                 id="task-desc-input"
                 class="form-control"
                 placeholder="Что конкретно нужно сделать?&#10;Пример: Предоставим исходные видео и трек. Нужно нарезать динамичные кадры, наложить субтитры и добавить звуковые эффекты в CapCut или Premiere..."
+                data-i18n-placeholder="post.descPlaceholder"
                 required
               ></textarea>
             </div>
@@ -518,7 +539,7 @@
                     <polyline points="20 6 9 17 4 12"></polyline>
                   </svg>
                 </span>
-                <span>Без ИП и бумажных договоров</span>
+                <span data-i18n="post.perk1">Без ИП и бумажных договоров</span>
               </div>
               <div class="perk-item">
                 <span class="perk-icon">
@@ -527,7 +548,7 @@
                     <polyline points="12 6 12 12 16 14"></polyline>
                   </svg>
                 </span>
-                <span>Отклики в первые 15 минут</span>
+                <span data-i18n="post.perk2">Отклики в первые 15 минут</span>
               </div>
               <div class="perk-item">
                 <span class="perk-icon">
@@ -536,7 +557,7 @@
                     <line x1="2" y1="10" x2="22" y2="10"></line>
                   </svg>
                 </span>
-                <span>Выплаты на карту или СБП</span>
+                <span data-i18n="post.perk3">Выплаты на карту или СБП</span>
               </div>
             </div>
 
@@ -696,14 +717,30 @@
     <!-- GOOGLE IDENTITY SERVICES & FIREBASE GOOGLE OAUTH -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script type="module" src="/src/firebase-auth.ts"></script>
+    <script type="module" src="/src/vibe-settings.ts"></script>
 
     <script>
-      let currentTheme = 'dark';
-      let currentLang = 'ru';
-      let currentCurrency = 'RUB';
+      // Мгновенная инициализация настроек из локального хранилища (без сброса на дефолт при перезагрузке)
+      let initialSettings = { theme: 'dark', lang: 'ru', currency: 'RUB' };
+      try {
+        const rawSaved = localStorage.getItem('vw_settings');
+        if (rawSaved) {
+          const parsed = JSON.parse(rawSaved);
+          if (parsed.theme) initialSettings.theme = parsed.theme;
+          if (parsed.lang) initialSettings.lang = parsed.lang;
+          if (parsed.currency) initialSettings.currency = parsed.currency;
+        }
+      } catch (_) {}
+
+      let currentTheme = initialSettings.theme;
+      let currentLang = initialSettings.lang;
+      let currentCurrency = initialSettings.currency;
       let currentUser = null;
       let sessionToken = localStorage.getItem('vw_session_token') || '';
       let selectedCategory = 'тексты';
+
+      document.documentElement.setAttribute('data-theme', currentTheme);
+      document.documentElement.lang = currentLang;
 
       function getAuthHeaders() {
         const headers = {};
@@ -721,22 +758,68 @@
         });
       }
 
+      function applyTranslations() {
+        if (window.VWSettings && typeof window.VWSettings.applyTranslations === 'function') {
+          window.VWSettings.applyTranslations();
+          return;
+        }
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+          const key = el.getAttribute('data-i18n');
+          // Fallback dictionary
+          if (key === 'nav.backToTasks') el.textContent = currentLang === 'ru' ? 'Вернуться к ленте заданий' : 'Back to tasks feed';
+          if (key === 'post.badge') el.textContent = currentLang === 'ru' ? 'Публикация заказа' : 'Task publishing';
+          if (key === 'post.title') el.textContent = currentLang === 'ru' ? 'Разместить заказ на Vibe Working' : 'Post a task on Vibe Working';
+          if (key === 'post.categoryLabel') el.textContent = currentLang === 'ru' ? 'Выберите категорию' : 'Select category';
+          if (key === 'post.titleLabel') el.textContent = currentLang === 'ru' ? 'Название задания' : 'Task title';
+          if (key === 'post.budgetLabel') el.textContent = currentLang === 'ru' ? 'Бюджет вознаграждения' : 'Budget';
+          if (key === 'post.descLabel') el.textContent = currentLang === 'ru' ? 'Подробное описание' : 'Detailed description';
+          if (key === 'post.submit') el.textContent = currentLang === 'ru' ? 'Опубликовать задание' : 'Publish task';
+          if (key === 'nav.tasks') el.textContent = currentLang === 'ru' ? 'Задания' : 'Tasks';
+          if (key === 'nav.how') el.textContent = currentLang === 'ru' ? 'Как это работает' : 'How it works';
+        });
+        document.documentElement.lang = currentLang;
+      }
+
       // Загрузка настроек с сервера
       async function loadServerSettings() {
+        if (window.VWSettings && typeof window.VWSettings.syncServerSettings === 'function') {
+          await window.VWSettings.syncServerSettings();
+          const s = window.VWSettings.getSettings();
+          currentTheme = s.theme;
+          currentLang = s.lang;
+          currentCurrency = s.currency;
+          updateSettingsUI();
+          applyTranslations();
+          return;
+        }
+
         try {
           const res = await fetch('/api/settings', { headers: getAuthHeaders() });
-          const data = await res.json();
-          if (data && data.settings) {
-            currentTheme = data.settings.theme || 'dark';
-            currentLang = data.settings.lang || 'ru';
-            currentCurrency = data.settings.currency || 'RUB';
-            document.documentElement.setAttribute('data-theme', currentTheme);
-            const curSelect = document.getElementById('task-currency-select');
-            if (curSelect) curSelect.value = currentCurrency;
-            updateSettingsUI();
-            const noticeEl = document.getElementById('settings-ip-notice');
-            if (noticeEl && data.ip) {
-              noticeEl.textContent = data.source === 'user' ? 'Синхронизировано в профиле' : `Синхронизировано по IP: ${data.ip}`;
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.settings) {
+              currentTheme = data.settings.theme || currentTheme;
+              currentLang = data.settings.lang || currentLang;
+              currentCurrency = data.settings.currency || currentCurrency;
+
+              localStorage.setItem('vw_settings', JSON.stringify({
+                theme: currentTheme,
+                lang: currentLang,
+                currency: currentCurrency,
+                updatedAt: Date.now()
+              }));
+
+              document.documentElement.setAttribute('data-theme', currentTheme);
+              document.documentElement.lang = currentLang;
+              updateSettingsUI();
+              applyTranslations();
+
+              const noticeEl = document.getElementById('settings-ip-notice');
+              if (noticeEl && data.ip) {
+                noticeEl.textContent = data.source === 'user'
+                  ? (currentLang === 'ru' ? 'Синхронизировано в профиле' : 'Synced with your profile')
+                  : (currentLang === 'ru' ? `Синхронизировано по IP: ${data.ip}` : `Synced by IP: ${data.ip}`);
+              }
             }
           }
         } catch (e) {
@@ -745,16 +828,33 @@
       }
 
       async function saveServerSettings() {
+        const payload = {
+          theme: currentTheme,
+          lang: currentLang,
+          currency: currentCurrency,
+          updatedAt: Date.now()
+        };
+        localStorage.setItem('vw_settings', JSON.stringify(payload));
+
+        if (window.VWSettings && typeof window.VWSettings.saveServerSettings === 'function') {
+          await window.VWSettings.saveServerSettings();
+          return;
+        }
+
         try {
           const res = await fetch('/api/settings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-            body: JSON.stringify({ theme: currentTheme, lang: currentLang, currency: currentCurrency })
+            body: JSON.stringify(payload)
           });
-          const data = await res.json();
-          const noticeEl = document.getElementById('settings-ip-notice');
-          if (noticeEl && data.ip) {
-            noticeEl.textContent = currentUser ? 'Синхронизировано в профиле' : `Синхронизировано по IP: ${data.ip}`;
+          if (res.ok) {
+            const data = await res.json();
+            const noticeEl = document.getElementById('settings-ip-notice');
+            if (noticeEl && data.ip) {
+              noticeEl.textContent = currentUser
+                ? (currentLang === 'ru' ? 'Синхронизировано в профиле' : 'Synced to profile')
+                : (currentLang === 'ru' ? `Синхронизировано по IP: ${data.ip}` : `Synced by IP: ${data.ip}`);
+            }
           }
         } catch (e) {}
       }
@@ -767,20 +867,34 @@
         document.querySelectorAll('.currency-options .settings-opt').forEach(btn => {
           btn.classList.toggle('active', btn.id === 'cur-opt-' + currentCurrency.toLowerCase());
         });
+        const curSelect = document.getElementById('task-currency-select');
+        if (curSelect && curSelect.value !== currentCurrency) {
+          curSelect.value = currentCurrency;
+        }
       }
 
       function setTheme(theme) {
         currentTheme = theme;
         document.documentElement.setAttribute('data-theme', theme);
         updateSettingsUI();
-        saveServerSettings();
-        showToast(theme === 'light' ? 'Светлая тема включена' : 'Тёмная тема включена');
+        if (window.VWSettings && typeof window.VWSettings.setTheme === 'function') {
+          window.VWSettings.setTheme(theme);
+        } else {
+          saveServerSettings();
+        }
+        showToast(theme === 'light' ? (currentLang === 'ru' ? 'Светлая тема включена' : 'Light theme enabled') : (currentLang === 'ru' ? 'Тёмная тема включена' : 'Dark theme enabled'));
       }
 
       function setLanguage(lang) {
         currentLang = lang;
+        document.documentElement.lang = lang;
+        applyTranslations();
         updateSettingsUI();
-        saveServerSettings();
+        if (window.VWSettings && typeof window.VWSettings.setLanguage === 'function') {
+          window.VWSettings.setLanguage(lang);
+        } else {
+          saveServerSettings();
+        }
         showToast(lang === 'ru' ? 'Язык: Русский' : 'Language: English');
       }
 
@@ -789,9 +903,59 @@
         const curSelect = document.getElementById('task-currency-select');
         if (curSelect) curSelect.value = cur;
         updateSettingsUI();
-        saveServerSettings();
-        showToast('Валюта: ' + cur);
+        if (window.VWSettings && typeof window.VWSettings.setCurrency === 'function') {
+          window.VWSettings.setCurrency(cur);
+        } else {
+          saveServerSettings();
+        }
+        showToast((currentLang === 'ru' ? 'Валюта: ' : 'Currency: ') + cur);
       }
+
+      function handleTaskCurrencyChange(cur) {
+        setCurrency(cur);
+      }
+
+      // Слушатель глобальной синхронизации меж страницами
+      window.addEventListener('vw:settings-changed', (e) => {
+        if (e && e.detail) {
+          const s = e.detail;
+          if (s.theme && s.theme !== currentTheme) {
+            currentTheme = s.theme;
+            document.documentElement.setAttribute('data-theme', currentTheme);
+          }
+          if (s.lang && s.lang !== currentLang) {
+            currentLang = s.lang;
+            document.documentElement.lang = currentLang;
+            applyTranslations();
+          }
+          if (s.currency && s.currency !== currentCurrency) {
+            currentCurrency = s.currency;
+          }
+          updateSettingsUI();
+        }
+      });
+
+      // Синхронизация через storage event
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'vw_settings' && e.newValue) {
+          try {
+            const s = JSON.parse(e.newValue);
+            if (s.theme) {
+              currentTheme = s.theme;
+              document.documentElement.setAttribute('data-theme', currentTheme);
+            }
+            if (s.lang) {
+              currentLang = s.lang;
+              document.documentElement.lang = currentLang;
+              applyTranslations();
+            }
+            if (s.currency) {
+              currentCurrency = s.currency;
+            }
+            updateSettingsUI();
+          } catch (_) {}
+        }
+      });
 
       // Авторизация
       async function checkCurrentAuth() {

@@ -3,6 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- МГНОВЕННОЕ ВОССТАНОВЛЕНИЕ НАСТРОЕК (БЕЗ МЕРЦАНИЯ ПРИ ПЕРЕЗАГРУЗКЕ) -->
+    <script>
+      (function() {
+        try {
+          var s = localStorage.getItem('vw_settings');
+          if (s) {
+            var p = JSON.parse(s);
+            if (p.theme) document.documentElement.setAttribute('data-theme', p.theme);
+            if (p.lang) document.documentElement.lang = p.lang;
+          }
+        } catch(e) {}
+      })();
+    </script>
     <title>Vibe Working — фриланс-биржа для подростков</title>
     <meta name="description" content="Платформа микрозадач для подростков от 14 лет без ИП, самозанятости и бюрократии." />
     <meta property="og:title" content="Vibe Working — фриланс-биржа для подростков" />
@@ -850,6 +863,7 @@
     <!-- GOOGLE IDENTITY SERVICES & FIREBASE GOOGLE OAUTH -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script type="module" src="/src/firebase-auth.ts"></script>
+    <script type="module" src="/src/vibe-settings.ts"></script>
 
     <script>
       const translations = {
@@ -1006,16 +1020,33 @@
         BYN: { symbol: 'Br', position: 'after', rate: 0.036, decimals: 2 }
       };
 
-      let currentLang = 'ru';
-      let currentTheme = 'dark';
-      let currentCurrency = 'RUB';
+      // Мгновенная инициализация настроек из локального хранилища (без сброса на дефолт при перезагрузке)
+      let initialSettings = { theme: 'dark', lang: 'ru', currency: 'RUB' };
+      try {
+        const rawSaved = localStorage.getItem('vw_settings');
+        if (rawSaved) {
+          const parsed = JSON.parse(rawSaved);
+          if (parsed.theme) initialSettings.theme = parsed.theme;
+          if (parsed.lang) initialSettings.lang = parsed.lang;
+          if (parsed.currency) initialSettings.currency = parsed.currency;
+        }
+      } catch (_) {}
+
+      let currentLang = initialSettings.lang;
+      let currentTheme = initialSettings.theme;
+      let currentCurrency = initialSettings.currency;
       let currentUser = null;
       let sessionToken = localStorage.getItem('vw_session_token') || '';
+
+      // Немедленно применяем тему к документу
+      document.documentElement.setAttribute('data-theme', currentTheme);
+      document.documentElement.lang = currentLang;
 
       function getAuthHeaders() {
         const headers = {};
         if (sessionToken) {
           headers['Authorization'] = 'Bearer ' + sessionToken;
+          headers['x-session-token'] = sessionToken;
         }
         return headers;
       }
@@ -1025,6 +1056,9 @@
       }
 
       function formatPrice(rubAmount) {
+        if (window.VWSettings && typeof window.VWSettings.formatPrice === 'function') {
+          return window.VWSettings.formatPrice(rubAmount);
+        }
         const cur = CURRENCIES[currentCurrency] || CURRENCIES.RUB;
         const value = rubAmount * cur.rate;
         const num = value.toFixed(cur.decimals).replace('.', ',');
@@ -1071,25 +1105,45 @@
         if (cByn) cByn.classList.toggle('active', currentCurrency === 'BYN');
       }
 
-      // Загрузка настроек с сервера (по IP / профилю)
+      // Синхронизация настроек с сервера (по IP / профилю)
       async function loadServerSettings() {
+        if (window.VWSettings && typeof window.VWSettings.syncServerSettings === 'function') {
+          await window.VWSettings.syncServerSettings();
+          const s = window.VWSettings.getSettings();
+          currentTheme = s.theme;
+          currentLang = s.lang;
+          currentCurrency = s.currency;
+          applyTranslations();
+          updateSettingsUI();
+          return;
+        }
+
         try {
           const res = await fetch('/api/settings', { headers: getAuthHeaders() });
-          const data = await res.json();
-          if (data && data.settings) {
-            currentTheme = data.settings.theme || 'dark';
-            currentLang = data.settings.lang || 'ru';
-            currentCurrency = data.settings.currency || 'RUB';
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.settings) {
+              currentTheme = data.settings.theme || currentTheme;
+              currentLang = data.settings.lang || currentLang;
+              currentCurrency = data.settings.currency || currentCurrency;
 
-            document.documentElement.setAttribute('data-theme', currentTheme);
-            applyTranslations();
-            updateSettingsUI();
+              localStorage.setItem('vw_settings', JSON.stringify({
+                theme: currentTheme,
+                lang: currentLang,
+                currency: currentCurrency,
+                updatedAt: Date.now()
+              }));
 
-            const noticeEl = document.getElementById('settings-ip-notice');
-            if (noticeEl) {
-              noticeEl.textContent = data.source === 'user'
-                ? (currentLang === 'ru' ? 'Настройки синхронизированы с вашим профилем' : 'Settings synced with your profile')
-                : (currentLang === 'ru' ? `Настройки сохранены на сервере для вашего IP (${data.ip || 'сеть'})` : `Settings saved on server for your IP (${data.ip || 'network'})`);
+              document.documentElement.setAttribute('data-theme', currentTheme);
+              applyTranslations();
+              updateSettingsUI();
+
+              const noticeEl = document.getElementById('settings-ip-notice');
+              if (noticeEl) {
+                noticeEl.textContent = data.source === 'user'
+                  ? (currentLang === 'ru' ? 'Настройки синхронизированы с вашим профилем' : 'Settings synced with your profile')
+                  : (currentLang === 'ru' ? `Настройки сохранены на сервере для вашего IP (${data.ip || 'сеть'})` : `Settings saved on server for your IP (${data.ip || 'network'})`);
+              }
             }
           }
         } catch (e) {
@@ -1097,8 +1151,22 @@
         }
       }
 
-      // Сохранение настроек на сервере (по IP / профилю)
+      // Сохранение настроек локально и на сервере (по IP / профилю)
       async function saveServerSettings() {
+        // Мгновенно сохраняем в локальное хранилище для исключения сброса при перезагрузке
+        const payload = {
+          theme: currentTheme,
+          lang: currentLang,
+          currency: currentCurrency,
+          updatedAt: Date.now()
+        };
+        localStorage.setItem('vw_settings', JSON.stringify(payload));
+
+        if (window.VWSettings && typeof window.VWSettings.saveServerSettings === 'function') {
+          await window.VWSettings.saveServerSettings();
+          return;
+        }
+
         try {
           const res = await fetch('/api/settings', {
             method: 'POST',
@@ -1106,18 +1174,16 @@
               'Content-Type': 'application/json',
               ...getAuthHeaders()
             },
-            body: JSON.stringify({
-              theme: currentTheme,
-              lang: currentLang,
-              currency: currentCurrency
-            })
+            body: JSON.stringify(payload)
           });
-          const data = await res.json();
-          const noticeEl = document.getElementById('settings-ip-notice');
-          if (noticeEl && data.ip) {
-            noticeEl.textContent = currentUser
-              ? (currentLang === 'ru' ? 'Настройки сохранены в профиле' : 'Settings saved to profile')
-              : (currentLang === 'ru' ? `Настройки сохранены для IP: ${data.ip}` : `Settings saved for IP: ${data.ip}`);
+          if (res.ok) {
+            const data = await res.json();
+            const noticeEl = document.getElementById('settings-ip-notice');
+            if (noticeEl && data.ip) {
+              noticeEl.textContent = currentUser
+                ? (currentLang === 'ru' ? 'Настройки сохранены в профиле' : 'Settings saved to profile')
+                : (currentLang === 'ru' ? `Настройки сохранены для IP: ${data.ip}` : `Settings saved for IP: ${data.ip}`);
+            }
           }
         } catch (e) {
           console.warn('Error saving settings to server:', e);
@@ -1128,14 +1194,23 @@
         currentTheme = theme;
         document.documentElement.setAttribute('data-theme', theme);
         updateSettingsUI();
-        saveServerSettings();
+        if (window.VWSettings && typeof window.VWSettings.setTheme === 'function') {
+          window.VWSettings.setTheme(theme);
+        } else {
+          saveServerSettings();
+        }
         showToast(theme === 'light' ? (currentLang === 'ru' ? 'Светлая тема включена' : 'Light theme enabled') : (currentLang === 'ru' ? 'Тёмная тема включена' : 'Dark theme enabled'));
       }
 
       function setLanguage(lang) {
         currentLang = lang;
         applyTranslations();
-        saveServerSettings();
+        updateSettingsUI();
+        if (window.VWSettings && typeof window.VWSettings.setLanguage === 'function') {
+          window.VWSettings.setLanguage(lang);
+        } else {
+          saveServerSettings();
+        }
         fetchTasks();
         showToast(lang === 'ru' ? 'Язык переключён на русский' : 'Language switched to English');
       }
@@ -1144,10 +1219,62 @@
         if (!CURRENCIES[cur]) return;
         currentCurrency = cur;
         updateSettingsUI();
-        saveServerSettings();
+        if (window.VWSettings && typeof window.VWSettings.setCurrency === 'function') {
+          window.VWSettings.setCurrency(cur);
+        } else {
+          saveServerSettings();
+        }
         fetchTasks();
         showToast((currentLang === 'ru' ? 'Валюта изменена на ' : 'Currency changed to ') + cur);
       }
+
+      // Слушатель глобальной синхронизации настроек меж страницами и вкладками
+      window.addEventListener('vw:settings-changed', (e) => {
+        if (e && e.detail) {
+          const s = e.detail;
+          let changed = false;
+          if (s.theme && s.theme !== currentTheme) {
+            currentTheme = s.theme;
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            changed = true;
+          }
+          if (s.lang && s.lang !== currentLang) {
+            currentLang = s.lang;
+            document.documentElement.lang = currentLang;
+            applyTranslations();
+            changed = true;
+          }
+          if (s.currency && s.currency !== currentCurrency) {
+            currentCurrency = s.currency;
+            changed = true;
+          }
+          updateSettingsUI();
+          if (changed) fetchTasks();
+        }
+      });
+
+      // Storage event для синхронизации настроек между разными страницами и вкладками
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'vw_settings' && e.newValue) {
+          try {
+            const s = JSON.parse(e.newValue);
+            if (s.theme && s.theme !== currentTheme) {
+              currentTheme = s.theme;
+              document.documentElement.setAttribute('data-theme', currentTheme);
+            }
+            if (s.lang && s.lang !== currentLang) {
+              currentLang = s.lang;
+              document.documentElement.lang = currentLang;
+              applyTranslations();
+            }
+            if (s.currency && s.currency !== currentCurrency) {
+              currentCurrency = s.currency;
+            }
+            updateSettingsUI();
+            fetchTasks();
+          } catch (_) {}
+        }
+      });
 
       // ==========================================
       // ЗАГРУЗКА РЕАЛЬНЫХ ЗАДАНИЙ (БЕЗ ДЕМО-ЗАПИСЕЙ)

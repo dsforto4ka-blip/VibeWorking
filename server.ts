@@ -151,6 +151,9 @@ async function startServer() {
     const user = getSessionUser(req, db);
 
     if (user && user.settings) {
+      // Синхронизируем настройки авторизованного профиля с IP
+      db.ipSettings[ip] = user.settings;
+      writeDb(db);
       return res.json({ source: 'user', settings: user.settings, ip });
     }
 
@@ -163,6 +166,9 @@ async function startServer() {
       lang: 'ru',
       currency: 'RUB',
     };
+    // Сохраняем начальные настройки для IP
+    db.ipSettings[ip] = defaultSettings;
+    writeDb(db);
     res.json({ source: 'default', settings: defaultSettings, ip });
   });
 
@@ -178,16 +184,16 @@ async function startServer() {
       currency: ['USD', 'EUR', 'BYN'].includes(currency) ? currency : 'RUB',
     };
 
-    // Save by IP
+    // Сохраняем по IP
     db.ipSettings[ip] = newSettings;
 
-    // Save to user profile if logged in
+    // Сохраняем в профиль пользователя, если он авторизован
     if (user) {
       user.settings = newSettings;
     }
 
     writeDb(db);
-    res.json({ success: true, settings: newSettings, ip });
+    res.json({ success: true, settings: newSettings, ip, source: user ? 'user' : 'ip' });
   });
 
   // ==========================================
@@ -250,6 +256,11 @@ async function startServer() {
     } else {
       if (photoURL && !user.avatar) user.avatar = photoURL;
       if (displayName && user.name === user.email?.split('@')[0]) user.name = displayName;
+      if (user.settings) {
+        db.ipSettings[ip] = user.settings;
+      } else if (db.ipSettings[ip]) {
+        user.settings = db.ipSettings[ip];
+      }
     }
 
     // Создаем сессию
@@ -371,6 +382,13 @@ async function startServer() {
       }
     } else {
       return res.status(400).json({ error: 'Укажите данные для входа' });
+    }
+
+    const ip = getClientIp(req);
+    if (user.settings) {
+      db.ipSettings[ip] = user.settings;
+    } else if (db.ipSettings[ip]) {
+      user.settings = db.ipSettings[ip];
     }
 
     const token = 'token_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
