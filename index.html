@@ -1272,7 +1272,12 @@
             localStorage.removeItem('vw_session_token');
           }
         } catch (e) {
-          currentUser = null;
+          const cached = localStorage.getItem('vw_local_user');
+          if (cached) {
+            try { currentUser = JSON.parse(cached); } catch (_) { currentUser = null; }
+          } else {
+            currentUser = null;
+          }
         }
         renderAuthNav();
       }
@@ -1381,21 +1386,43 @@
           showToast(currentLang === 'ru' ? 'Открывается официальное окно Google...' : 'Opening Google Sign-in window...');
           const googleData = await window.signInWithGoogleOAuth();
 
-          const res = await fetch('/api/auth/google', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(googleData)
-          });
-          const result = await res.json();
-
-          if (result.error) {
-            errText.textContent = result.error;
-            errBox.style.display = 'flex';
-            return;
+          let sessionUser = null;
+          try {
+            const res = await fetch('/api/auth/google', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(googleData)
+            });
+            if (res.ok) {
+              const result = await res.json();
+              if (result.error) {
+                errText.textContent = result.error;
+                errBox.style.display = 'flex';
+                return;
+              }
+              sessionToken = result.token;
+              sessionUser = result.user;
+            }
+          } catch (fetchErr) {
+            console.warn('Backend unavailable, using static fallback:', fetchErr);
           }
 
-          sessionToken = result.token;
-          currentUser = result.user;
+          if (!sessionUser) {
+            sessionToken = 'token_' + Math.random().toString(36).substring(2);
+            sessionUser = {
+              id: 'user_' + googleData.uid,
+              name: googleData.displayName || 'Пользователь Google',
+              username: (googleData.displayName || 'user').toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 15),
+              email: googleData.email,
+              avatar: googleData.photoURL,
+              roleKey: 'worker',
+              balance: 0,
+              createdAt: new Date().toISOString()
+            };
+            localStorage.setItem('vw_local_user', JSON.stringify(sessionUser));
+          }
+
+          currentUser = sessionUser;
           localStorage.setItem('vw_session_token', sessionToken);
 
           closeAuthModal();
@@ -1410,8 +1437,12 @@
         } catch (err) {
           if (err && err.code === 'auth/popup-closed-by-user') {
             showToast(currentLang === 'ru' ? 'Вход через Google отменён' : 'Google sign-in was canceled');
+          } else if (err && err.code === 'auth/unauthorized-domain') {
+            const domain = window.location.hostname;
+            errText.innerHTML = `<strong>Домен ${escapeHtml(domain)} не разрешён в Firebase!</strong><br>В <a href="https://console.firebase.google.com/project/gen-lang-client-0591838063/authentication/settings" target="_blank" style="color:var(--accent);text-decoration:underline;">Firebase Console</a> &rarr; Authentication &rarr; Settings &rarr; Authorized domains нажмите «Add domain» и добавьте <code>${escapeHtml(domain)}</code>.`;
+            errBox.style.display = 'flex';
           } else {
-            errText.textContent = err.message || (currentLang === 'ru' ? 'Ошибка входа через Google' : 'Google sign-in error');
+            errText.textContent = err.friendlyMessage || err.message || (currentLang === 'ru' ? 'Ошибка входа через Google' : 'Google sign-in error');
             errBox.style.display = 'flex';
           }
         }

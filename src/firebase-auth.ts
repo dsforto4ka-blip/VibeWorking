@@ -45,6 +45,10 @@ export async function signInWithGoogleOAuth() {
     };
   } catch (error: any) {
     console.error('Google Sign-In Error:', error);
+    if (error && error.code === 'auth/unauthorized-domain') {
+      const currentDomain = window.location.hostname || window.location.host;
+      error.friendlyMessage = `Домен "${currentDomain}" не разрешён в Firebase. Добавьте "${currentDomain}" в Firebase Console -> Authentication -> Settings -> Authorized domains.`;
+    }
     throw error;
   }
 }
