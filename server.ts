@@ -107,6 +107,28 @@ function writeDb(db: Database) {
   }
 }
 
+const CYRILLIC_TO_LATIN_MAP: Record<string, string> = {
+  а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'yo', ж: 'zh', з: 'z',
+  и: 'i', й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r',
+  с: 's', т: 't', у: 'u', ф: 'f', х: 'kh', ц: 'ts', ч: 'ch', ш: 'sh',
+  щ: 'shch', ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya',
+};
+
+function transliterateToLatin(text: string): string {
+  return text
+    .toLowerCase()
+    .split('')
+    .map((ch) => (CYRILLIC_TO_LATIN_MAP[ch] !== undefined ? CYRILLIC_TO_LATIN_MAP[ch] : ch))
+    .join('')
+    .replace(/[^a-z0-9_]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 20);
+}
+
+function isValidLatinUsername(username: string): boolean {
+  return /^[a-zA-Z0-9_]{3,20}$/.test(username);
+}
+
 function getClientIp(req: express.Request): string {
   const forwarded = req.headers['x-forwarded-for'];
   if (typeof forwarded === 'string') {
@@ -130,8 +152,39 @@ function getSessionUser(req: express.Request, db: Database): User | null {
 
   if (token && db.sessions[token]) {
     const userId = db.sessions[token];
-    return db.users.find((u) => u.id === userId) || null;
+    const user = db.users.find((u) => u.id === userId);
+    if (user) return user;
   }
+
+  // Fallback 1: x-user-id header
+  const headerUserId = req.headers['x-user-id'];
+  if (typeof headerUserId === 'string' && headerUserId) {
+    const user = db.users.find((u) => u.id === headerUserId);
+    if (user) {
+      if (token) db.sessions[token] = user.id;
+      return user;
+    }
+  }
+
+  // Fallback 2: token is a user ID
+  if (token && token.startsWith('user_')) {
+    const user = db.users.find((u) => u.id === token);
+    if (user) {
+      db.sessions[token] = user.id;
+      return user;
+    }
+  }
+
+  // Fallback 3: x-user-email header
+  const headerEmail = req.headers['x-user-email'];
+  if (typeof headerEmail === 'string' && headerEmail) {
+    const user = db.users.find((u) => u.email && u.email.toLowerCase() === headerEmail.toLowerCase());
+    if (user) {
+      if (token) db.sessions[token] = user.id;
+      return user;
+    }
+  }
+
   return null;
 }
 
@@ -210,6 +263,52 @@ async function startServer() {
     res.json({ user: safeUser });
   });
 
+  // Синхронизация сессии и пользователя между страницами и вкладками
+  app.post('/api/auth/sync', (req, res) => {
+    const db = readDb();
+    const { user, token } = req.body;
+    if (!user || !user.id) {
+      return res.status(400).json({ error: 'User data required' });
+    }
+
+    let existing = db.users.find(
+      (u) => u.id === user.id || (user.email && u.email && u.email.toLowerCase() === user.email.toLowerCase())
+    );
+
+    if (!existing) {
+      existing = {
+        id: user.id,
+        name: user.name || 'Пользователь',
+        username: user.username || 'user',
+        email: user.email || '',
+        roleKey: user.roleKey || 'worker',
+        avatar: user.avatar || '',
+        about: user.about || '',
+        city: user.city || '',
+        skills: user.skills || '',
+        telegram: user.telegram || '',
+        balance: typeof user.balance === 'number' ? user.balance : 0,
+        settings: user.settings || { theme: 'dark', lang: 'ru', currency: 'RUB' },
+        createdAt: user.createdAt || new Date().toISOString(),
+      };
+      db.users.push(existing);
+    } else {
+      if (user.avatar && !existing.avatar) existing.avatar = user.avatar;
+      if (user.name && (!existing.name || existing.name === 'Пользователь')) existing.name = user.name;
+      if (user.telegram && !existing.telegram) existing.telegram = user.telegram;
+      if (user.about && !existing.about) existing.about = user.about;
+      if (user.username && (!existing.username || existing.username === 'user')) existing.username = user.username;
+    }
+
+    const sessionToken = token || ('token_' + Math.random().toString(36).substring(2) + Date.now().toString(36));
+    db.sessions[sessionToken] = existing.id;
+    writeDb(db);
+
+    const safeUser = { ...existing };
+    delete safeUser.password;
+    res.json({ success: true, user: safeUser, token: sessionToken });
+  });
+
   // Google OAuth вход / регистрация
   app.post('/api/auth/google', (req, res) => {
     const db = readDb();
@@ -227,14 +326,10 @@ async function startServer() {
     if (!user) {
       // Регистрируем нового реального пользователя
       const cleanName = displayName || email.split('@')[0];
-      const baseUsername = cleanName
-        .toLowerCase()
-        .replace(/[^a-z0-9а-яё]+/gi, '_')
-        .replace(/^_+|_+$/g, '')
-        .slice(0, 20) || 'user';
+      const baseUsername = transliterateToLatin(cleanName) || 'user';
       let username = baseUsername;
       let counter = 1;
-      while (db.users.some((u) => u.username === username)) {
+      while (db.users.some((u) => u.username.toLowerCase() === username.toLowerCase())) {
         username = `${baseUsername}_${counter++}`;
       }
 
@@ -248,14 +343,16 @@ async function startServer() {
         about: '',
         city: '',
         skills: '',
+        telegram: '',
         balance: 0,
         settings: ipSetting,
         createdAt: new Date().toISOString(),
       };
       db.users.push(user);
     } else {
+      // Сохраняем кастомный аватар и не перезаписываем кастомные поля
       if (photoURL && !user.avatar) user.avatar = photoURL;
-      if (displayName && user.name === user.email?.split('@')[0]) user.name = displayName;
+      if (displayName && (!user.name || user.name === user.email?.split('@')[0])) user.name = displayName;
       if (user.settings) {
         db.ipSettings[ip] = user.settings;
       } else if (db.ipSettings[ip]) {
@@ -276,7 +373,7 @@ async function startServer() {
   // Регистрация по почте / телефону
   app.post('/api/auth/register', (req, res) => {
     const db = readDb();
-    const { name, email, phone, password, roleKey } = req.body;
+    const { name, email, phone, password, roleKey, username: reqUsername } = req.body;
 
     if (!name || !name.trim()) {
       return res.status(400).json({ error: 'Имя или никнейм обязательны' });
@@ -290,25 +387,35 @@ async function startServer() {
       return res.status(400).json({ error: 'Пользователь с таким телефоном уже существует' });
     }
 
+    let chosenUsername = '';
+    if (reqUsername) {
+      const cleanU = String(reqUsername).replace(/^@/, '').trim();
+      if (!isValidLatinUsername(cleanU)) {
+        return res.status(400).json({
+          error: 'Юзернейм должен быть исключительно на латинице (a-z, 0-9, _ от 3 до 20 символов)',
+        });
+      }
+      if (db.users.some((u) => u.username.toLowerCase() === cleanU.toLowerCase())) {
+        return res.status(400).json({ error: 'Этот юзернейм уже занят' });
+      }
+      chosenUsername = cleanU;
+    } else {
+      const baseUsername = transliterateToLatin(name) || 'user';
+      let username = baseUsername;
+      let counter = 1;
+      while (db.users.some((u) => u.username.toLowerCase() === username.toLowerCase())) {
+        username = `${baseUsername}_${counter++}`;
+      }
+      chosenUsername = username;
+    }
+
     const ip = getClientIp(req);
     const ipSetting = db.ipSettings[ip] || { theme: 'dark', lang: 'ru', currency: 'RUB' };
-
-    const baseUsername = name
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9а-яё]+/gi, '_')
-      .replace(/^_+|_+$/g, '')
-      .slice(0, 20) || 'user';
-    let username = baseUsername;
-    let counter = 1;
-    while (db.users.some((u) => u.username === username)) {
-      username = `${baseUsername}_${counter++}`;
-    }
 
     const user: User = {
       id: 'user_' + Date.now() + Math.random().toString(36).substring(2, 6),
       name: name.trim(),
-      username,
+      username: chosenUsername,
       email: email ? email.trim() : undefined,
       phone: phone ? phone.trim() : undefined,
       password: password || undefined,
@@ -557,9 +664,16 @@ async function startServer() {
     const { displayName, username, about, city, skills, email, telegram, avatar } = req.body;
 
     if (displayName) user.name = String(displayName).trim();
-    if (username) {
+    if (username !== undefined) {
       const cleanU = String(username).replace(/^@/, '').trim();
-      const duplicate = db.users.find((u) => u.username === cleanU && u.id !== user.id);
+      if (!isValidLatinUsername(cleanU)) {
+        return res.status(400).json({
+          error: 'Юзернейм должен быть исключительно на латинице (a-z, 0-9, _ от 3 до 20 символов)',
+        });
+      }
+      const duplicate = db.users.find(
+        (u) => u.username.toLowerCase() === cleanU.toLowerCase() && u.id !== user.id
+      );
       if (duplicate) {
         return res.status(400).json({ error: 'Этот юзернейм уже занят' });
       }

@@ -153,6 +153,48 @@
       }
       .btn-auth-open:hover { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 14px var(--accent-soft); }
 
+      .btn-nav-settings {
+        background-color: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        min-height: 40px;
+        min-width: 40px;
+        padding: 0 10px;
+        border-radius: 10px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        box-sizing: border-box;
+      }
+      .btn-nav-settings:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+        background-color: var(--accent-soft);
+      }
+
+      .btn-logout-small {
+        background-color: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        min-height: 40px;
+        min-width: 40px;
+        padding: 0 10px;
+        border-radius: 10px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        box-sizing: border-box;
+      }
+      .btn-logout-small:hover {
+        border-color: var(--danger);
+        color: var(--danger);
+        background-color: var(--danger-soft);
+      }
+
       .page-content { padding: 40px 0 80px; }
 
       /* ПРИГЛАШЕНИЕ ВОЙТИ (ДЛЯ НЕАВТОРИЗОВАННЫХ) */
@@ -174,13 +216,200 @@
       }
       .profile-top { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 20px; }
       .profile-user-info { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
-      .profile-avatar {
-        width: 80px; height: 80px; border-radius: 50%;
-        background-color: var(--accent); color: var(--accent-on);
-        font-size: 32px; font-weight: 800; display: flex; align-items: center; justify-content: center;
-        overflow: hidden; border: 3px solid var(--border); flex-shrink: 0;
+
+      /* АВАТАР И СИСТЕМА ЗАГРУЗКИ С ЗАТЕМНЕНИЕМ НА 50% И КАРАНДАШОМ */
+      .profile-avatar-container {
+        display: inline-flex;
+        position: relative;
+        align-items: center;
+        justify-content: center;
       }
-      .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+      .profile-avatar-wrapper {
+        position: relative;
+        width: 84px;
+        height: 84px;
+        border-radius: 50%;
+        cursor: pointer;
+        border: 3px solid var(--border);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+        transition: border-color 0.25s ease, transform 0.2s ease;
+        overflow: hidden;
+        user-select: none;
+        flex-shrink: 0;
+      }
+      .profile-avatar-wrapper:hover {
+        border-color: var(--accent);
+        transform: scale(1.02);
+      }
+      .profile-avatar {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background-color: var(--accent);
+        color: var(--accent-on);
+        font-size: 32px;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        transition: filter 0.25s ease;
+      }
+      .profile-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
+        display: block;
+        transition: filter 0.25s ease;
+      }
+      /* Фото профиля при наведении затемняется на 50% */
+      .profile-avatar-wrapper:hover .profile-avatar,
+      .profile-avatar-wrapper:hover .profile-avatar img {
+        filter: brightness(0.5);
+        -webkit-filter: brightness(0.5);
+      }
+      /* По центру появляется одноцветный карандаш (белый), не затемняется */
+      .avatar-hover-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease;
+        z-index: 5;
+      }
+      .profile-avatar-wrapper:hover .avatar-hover-overlay {
+        opacity: 1;
+      }
+      .avatar-pencil-icon {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.8));
+      }
+      .avatar-pencil-icon svg {
+        stroke: #ffffff;
+      }
+
+      /* МОДАЛКА КАДРИРОВАНИЯ АВАТАРКИ */
+      .avatar-crop-box {
+        max-width: 420px;
+        width: 100%;
+        text-align: center;
+      }
+      .crop-viewport-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 20px 0;
+      }
+      .crop-viewport {
+        position: relative;
+        width: 280px;
+        height: 280px;
+        border-radius: 16px;
+        overflow: hidden;
+        background-color: #0c0c0e;
+        border: 1px solid var(--border);
+        box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.7);
+        cursor: grab;
+        touch-action: none;
+      }
+      .crop-viewport:active {
+        cursor: grabbing;
+      }
+      .crop-viewport canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+      .crop-circle-mask {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.58);
+        border-radius: 50%;
+        border: 2px dashed var(--accent);
+      }
+      .crop-controls {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 22px;
+        padding: 0 6px;
+      }
+      .btn-crop-zoom {
+        background-color: var(--bg-deep);
+        border: 1px solid var(--border);
+        color: var(--text);
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .btn-crop-zoom:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .crop-zoom-slider {
+        flex: 1;
+        accent-color: var(--accent);
+        cursor: pointer;
+      }
+      .crop-actions {
+        display: flex;
+        gap: 12px;
+      }
+      .btn-crop-cancel {
+        background-color: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        padding: 12px 18px;
+        border-radius: 12px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        flex: 1;
+      }
+      .btn-crop-cancel:hover {
+        border-color: var(--danger);
+        color: var(--danger);
+      }
+      .btn-crop-save {
+        background-color: var(--accent);
+        border: 1px solid var(--accent);
+        color: var(--accent-on);
+        padding: 12px 18px;
+        border-radius: 12px;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        flex: 1;
+      }
+      .btn-crop-save:hover {
+        filter: brightness(1.1);
+        box-shadow: 0 4px 18px var(--accent-soft);
+      }
+
       .profile-name { font-size: 26px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
       .profile-handle { font-size: 15px; color: var(--text-muted); margin-bottom: 8px; }
       .profile-role-badge {
@@ -376,8 +605,8 @@
             <li><a href="index.html#how-it-works" class="nav-link" data-i18n="nav.how">Как это работает</a></li>
             <li><a href="2 - объявление.html" class="nav-post-btn" data-i18n="nav.post">Разместить заказ</a></li>
           </ul>
-          <button type="button" class="btn-logout-small" onclick="openSettingsModal()" title="Настройки" style="margin-right: 2px;">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <button type="button" class="btn-nav-settings" onclick="openSettingsModal()" title="Настройки" style="margin-right: 2px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="3"></circle>
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
             </svg>
@@ -415,7 +644,19 @@
           <div class="profile-card">
             <div class="profile-top">
               <div class="profile-user-info">
-                <div class="profile-avatar" id="cab-avatar">U</div>
+                <div class="profile-avatar-container">
+                  <div class="profile-avatar-wrapper" onclick="triggerAvatarUpload()" title="Изменить фото профиля" data-i18n-title="avatar.changePhoto" aria-label="Изменить фото профиля">
+                    <div class="profile-avatar" id="cab-avatar">U</div>
+                    <div class="avatar-hover-overlay">
+                      <div class="avatar-pencil-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                  <input type="file" id="avatar-file-input" accept="image/*" style="display: none;" onchange="handleAvatarFileSelected(event)" />
+                </div>
                 <div>
                   <h1 class="profile-name" id="cab-name">Имя пользователя</h1>
                   <div class="profile-handle" id="cab-username">@username</div>
@@ -434,12 +675,11 @@
                   </svg>
                   <span data-i18n="cab.editProfile">Редактировать</span>
                 </button>
-                <button type="button" class="btn-profile-action" onclick="openSettingsModal()">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <button type="button" class="btn-nav-settings" onclick="openSettingsModal()" title="Настройки" data-i18n-title="settings.title" aria-label="Настройки">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="12" cy="12" r="3"></circle>
                     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                   </svg>
-                  <span data-i18n="cab.settings">Настройки</span>
                 </button>
                 <button type="button" class="btn-profile-action danger" onclick="logout()">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -461,39 +701,39 @@
           <div class="stats-grid">
             <div class="stat-card">
               <div>
-                <div class="stat-label">Текущий баланс</div>
+                <div class="stat-label" data-i18n="cab.balance">Текущий баланс</div>
                 <div class="stat-value accent" id="cab-balance">0 ₽</div>
-                <div class="stat-sub">Выплаты на карту или СБП</div>
+                <div class="stat-sub" data-i18n="cab.balanceSub">Выплаты на карту или СБП</div>
               </div>
               <div class="balance-buttons">
-                <button type="button" class="btn-balance" onclick="openBalanceModal('deposit')">+ Пополнить</button>
-                <button type="button" class="btn-balance" onclick="openBalanceModal('withdraw')">Вывести</button>
+                <button type="button" class="btn-balance" onclick="openBalanceModal('deposit')" data-i18n="cab.topUp">+ Пополнить</button>
+                <button type="button" class="btn-balance" onclick="openBalanceModal('withdraw')" data-i18n="cab.withdraw">Вывести</button>
               </div>
             </div>
 
             <div class="stat-card">
               <div>
-                <div class="stat-label">Размещено заказов</div>
+                <div class="stat-label" data-i18n="cab.ordersCount">Размещено заказов</div>
                 <div class="stat-value" id="cab-orders-count">0</div>
-                <div class="stat-sub">Заданий от вас</div>
+                <div class="stat-sub" data-i18n="cab.ordersSub">Заданий от вас</div>
               </div>
-              <a href="2 - объявление.html" class="btn-balance" style="margin-top: 12px; text-decoration: none;">+ Новый заказ</a>
+              <a href="2 - объявление.html" class="btn-balance" style="margin-top: 12px; text-decoration: none;" data-i18n="cab.postFirstOrder">+ Новый заказ</a>
             </div>
 
             <div class="stat-card">
               <div>
-                <div class="stat-label">Мои работы и отклики</div>
+                <div class="stat-label" data-i18n="cab.worksCount">Мои работы и отклики</div>
                 <div class="stat-value" id="cab-works-count">0</div>
-                <div class="stat-sub">Взято заданий</div>
+                <div class="stat-sub" data-i18n="cab.worksSub">Взято заданий</div>
               </div>
-              <a href="index.html#tasks" class="btn-balance" style="margin-top: 12px; text-decoration: none;">Найти работу</a>
+              <a href="index.html#tasks" class="btn-balance" style="margin-top: 12px; text-decoration: none;" data-i18n="nav.find">Найти работу</a>
             </div>
 
             <div class="stat-card">
               <div>
-                <div class="stat-label">Статус аккаунта</div>
-                <div class="stat-value" style="font-size: 20px; color: var(--accent);">Активен</div>
-                <div class="stat-sub" id="cab-device-status">Устройство привязано</div>
+                <div class="stat-label" data-i18n="settings.account">Профиль</div>
+                <div class="stat-value" style="font-size: 20px; color: var(--accent);">Vibe Working</div>
+                <div class="stat-sub" id="cab-device-status" data-i18n="settings.syncedProfile">Аккаунт синхронизирован</div>
               </div>
             </div>
           </div>
@@ -501,10 +741,10 @@
           <!-- ВКЛАДКИ КАБИНЕТА -->
           <div class="cabinet-tabs">
             <button type="button" class="cab-tab active" id="tab-btn-orders" onclick="switchCabinetTab('orders')">
-              Мои заказы <span class="cab-tab-badge" id="badge-orders">0</span>
+              <span data-i18n="cab.tabOrders">Мои заказы</span> <span class="cab-tab-badge" id="badge-orders">0</span>
             </button>
             <button type="button" class="cab-tab" id="tab-btn-works" onclick="switchCabinetTab('works')">
-              Мои отклики и работы <span class="cab-tab-badge" id="badge-works">0</span>
+              <span data-i18n="cab.tabWorks">Мои отклики и работы</span> <span class="cab-tab-badge" id="badge-works">0</span>
             </button>
           </div>
 
@@ -522,7 +762,7 @@
     </main>
 
     <!-- МОДАЛКА РЕДАКТИРОВАНИЯ ПРОФИЛЯ -->
-    <div class="modal-overlay" id="edit-profile-modal">
+    <div class="modal-overlay" id="edit-profile-modal" onclick="if (event.target === this) closeEditProfileModal()">
       <div class="modal-box">
         <button class="modal-close-btn" onclick="closeEditProfileModal()" aria-label="Закрыть">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -531,37 +771,84 @@
           </svg>
         </button>
 
-        <h3 class="modal-title">Редактировать профиль</h3>
-        <p class="modal-subtitle">Информация видна другим пользователям при откликах и заказах</p>
+        <h3 class="modal-title" data-i18n="profile.editTitle">Редактировать профиль</h3>
+        <p class="modal-subtitle" data-i18n="profile.editSubtitle">Информация видна другим пользователям при откликах и заказах</p>
 
         <form onsubmit="handleSaveProfile(event)">
           <div class="form-section">
-            <label class="form-label" for="edit-name">Отображаемое имя</label>
+            <label class="form-label" for="edit-name" data-i18n="profile.nameLabel">Отображаемое имя</label>
             <input type="text" class="form-control" id="edit-name" required />
           </div>
 
           <div class="form-section">
-            <label class="form-label" for="edit-username">Юзернейм (@никнейм)</label>
-            <input type="text" class="form-control" id="edit-username" required />
+            <label class="form-label" for="edit-username" data-i18n="profile.usernameLabel">Юзернейм (@никнейм)</label>
+            <input type="text" class="form-control" id="edit-username" pattern="[a-zA-Z0-9_]{3,20}" title="Только латинские буквы (a-z), цифры и _ (от 3 до 20 символов)" data-i18n-title="profile.usernameHint" required />
+            <div class="form-hint" data-i18n="profile.usernameHint" style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">Только латинские буквы (a-z), цифры и _ (от 3 до 20 символов)</div>
           </div>
 
           <div class="form-section">
-            <label class="form-label" for="edit-telegram">Telegram для связи</label>
+            <label class="form-label" for="edit-telegram" data-i18n="profile.tgLabel">Telegram для связи</label>
             <input type="text" class="form-control" id="edit-telegram" placeholder="@username" />
           </div>
 
           <div class="form-section">
-            <label class="form-label" for="edit-about">О себе / навыки</label>
-            <textarea class="form-control" id="edit-about" placeholder="Расскажите, чем занимаетесь, какие программы знаете..."></textarea>
+            <label class="form-label" for="edit-about" data-i18n="profile.aboutLabel">О себе / навыки</label>
+            <textarea class="form-control" id="edit-about" placeholder="Расскажите, чем занимаетесь, какие программы знаете..." data-i18n-placeholder="profile.aboutPlaceholder"></textarea>
           </div>
 
-          <button type="submit" class="btn-submit">Сохранить изменения</button>
+          <button type="submit" class="btn-submit" data-i18n="profile.saveBtn">Сохранить изменения</button>
         </form>
       </div>
     </div>
 
+    <!-- МОДАЛКА КАДРИРОВАНИЯ АВАТАРКИ -->
+    <div class="modal-overlay" id="avatar-crop-modal" onclick="if (event.target === this) closeAvatarCropModal()">
+      <div class="modal-box avatar-crop-box">
+        <button class="modal-close-btn" onclick="closeAvatarCropModal()" aria-label="Закрыть" data-i18n-aria="common.close">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+
+        <h3 class="modal-title" data-i18n="avatar.cropTitle">Кадрирование фото профиля</h3>
+        <p class="modal-subtitle" data-i18n="avatar.cropSubtitle">Перемещайте и масштабируйте изображение для идеальной круглой аватарки</p>
+
+        <div class="crop-viewport-container">
+          <div class="crop-viewport" id="crop-viewport">
+            <canvas id="crop-canvas" width="280" height="280"></canvas>
+            <div class="crop-circle-mask"></div>
+          </div>
+        </div>
+
+        <div class="crop-controls">
+          <button type="button" class="btn-crop-zoom" onclick="adjustCropZoom(-0.15)" title="Уменьшить" data-i18n-title="avatar.zoomOut">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              <line x1="8" y1="11" x2="14" y2="11"></line>
+            </svg>
+          </button>
+          <input type="range" class="crop-zoom-slider" id="crop-zoom-slider" min="1" max="3" step="0.02" value="1" oninput="handleCropSlider(event)" />
+          <button type="button" class="btn-crop-zoom" onclick="adjustCropZoom(0.15)" title="Увеличить" data-i18n-title="avatar.zoomIn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              <line x1="11" y1="8" x2="11" y2="14"></line>
+              <line x1="8" y1="11" x2="14" y2="11"></line>
+            </svg>
+          </button>
+        </div>
+
+        <div class="crop-actions">
+          <button type="button" class="btn-crop-cancel" onclick="closeAvatarCropModal()" data-i18n="avatar.cancel">Отмена</button>
+          <button type="button" class="btn-crop-save" onclick="saveCroppedAvatar()" data-i18n="avatar.save">Сохранить</button>
+        </div>
+      </div>
+    </div>
+
     <!-- МОДАЛКА БАЛАНСА (ПОПОЛНЕНИЕ / ВЫВОД) -->
-    <div class="modal-overlay" id="balance-modal">
+    <div class="modal-overlay" id="balance-modal" onclick="if (event.target === this) closeBalanceModal()">
       <div class="modal-box">
         <button class="modal-close-btn" onclick="closeBalanceModal()" aria-label="Закрыть">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -570,22 +857,22 @@
           </svg>
         </button>
 
-        <h3 class="modal-title" id="balance-modal-title">Пополнение баланса</h3>
-        <p class="modal-subtitle" id="balance-modal-subtitle">Без комиссии через СБП или банковскую карту</p>
+        <h3 class="modal-title" id="balance-modal-title" data-i18n="balance.topUpTitle">Пополнение баланса</h3>
+        <p class="modal-subtitle" id="balance-modal-subtitle" data-i18n="balance.subtitle">Без комиссии через СБП или банковскую карту</p>
 
         <form onsubmit="handleBalanceSubmit(event)">
           <div class="form-section">
-            <label class="form-label" for="balance-amount-input">Сумма в рублях (₽)</label>
+            <label class="form-label" for="balance-amount-input" data-i18n="balance.amountLabel">Сумма в рублях (₽)</label>
             <input type="number" class="form-control" id="balance-amount-input" min="50" step="50" placeholder="500" required />
           </div>
 
-          <button type="submit" class="btn-submit" id="balance-modal-btn">Подтвердить</button>
+          <button type="submit" class="btn-submit" id="balance-modal-btn" data-i18n="balance.submitBtn">Подтвердить</button>
         </form>
       </div>
     </div>
 
     <!-- МОДАЛКА НАСТРОЕК (ПО IP И ПРОФИЛЮ) -->
-    <div class="modal-overlay" id="settings-modal">
+    <div class="modal-overlay" id="settings-modal" onclick="if (event.target === this) closeSettingsModal()">
       <div class="modal-box">
         <button class="modal-close-btn" onclick="closeSettingsModal()" aria-label="Закрыть">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -594,32 +881,62 @@
           </svg>
         </button>
 
-        <h3 class="modal-title">Настройки</h3>
-        <p class="modal-subtitle">Настройки сохраняются на сервере по вашему IP и профилю</p>
+        <h3 class="modal-title" data-i18n="settings.title">Настройки</h3>
+        <p class="modal-subtitle" data-i18n="settings.subtitle">Настройки сохраняются на сервере по вашему IP и профилю</p>
 
         <div class="settings-section">
-          <label class="settings-label">Тема оформления</label>
+          <label class="settings-label" data-i18n="settings.theme">Тема оформления</label>
           <div class="settings-options">
-            <button type="button" class="settings-opt" id="theme-opt-dark" onclick="setTheme('dark')">🌙 Тёмная</button>
-            <button type="button" class="settings-opt" id="theme-opt-light" onclick="setTheme('light')">☀️ Светлая</button>
+            <button type="button" class="settings-opt" id="theme-opt-dark" onclick="setTheme('dark')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+              </svg>
+              <span data-i18n="settings.theme.dark">Тёмная</span>
+            </button>
+            <button type="button" class="settings-opt" id="theme-opt-light" onclick="setTheme('light')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="4"></circle>
+                <line x1="12" y1="2" x2="12" y2="4"></line>
+                <line x1="12" y1="20" x2="12" y2="22"></line>
+                <line x1="4.93" y1="4.93" x2="6.34" y2="6.34"></line>
+                <line x1="17.66" y1="17.66" x2="19.07" y2="19.07"></line>
+                <line x1="2" y1="12" x2="4" y2="12"></line>
+                <line x1="20" y1="12" x2="22" y2="12"></line>
+                <line x1="4.93" y1="19.07" x2="6.34" y2="17.66"></line>
+                <line x1="17.66" y1="6.34" x2="19.07" y2="4.93"></line>
+              </svg>
+              <span data-i18n="settings.theme.light">Светлая</span>
+            </button>
           </div>
         </div>
 
         <div class="settings-section">
-          <label class="settings-label">Язык</label>
+          <label class="settings-label" data-i18n="settings.language">Язык</label>
           <div class="settings-options">
-            <button type="button" class="settings-opt" id="lang-opt-ru" onclick="setLanguage('ru')">🇷🇺 Русский</button>
-            <button type="button" class="settings-opt" id="lang-opt-en" onclick="setLanguage('en')">🇬🇧 English</button>
+            <button type="button" class="settings-opt" id="lang-opt-ru" onclick="setLanguage('ru')">
+              <span class="flag-mono">🇷🇺</span> <span>Русский</span>
+            </button>
+            <button type="button" class="settings-opt" id="lang-opt-en" onclick="setLanguage('en')">
+              <span class="flag-mono">🇬🇧</span> <span>English</span>
+            </button>
           </div>
         </div>
 
         <div class="settings-section">
-          <label class="settings-label">Валюта</label>
+          <label class="settings-label" data-i18n="settings.currency">Валюта</label>
           <div class="settings-options currency-options">
-            <button type="button" class="settings-opt" id="cur-opt-rub" onclick="setCurrency('RUB')">₽ RUB</button>
-            <button type="button" class="settings-opt" id="cur-opt-usd" onclick="setCurrency('USD')">$ USD</button>
-            <button type="button" class="settings-opt" id="cur-opt-eur" onclick="setCurrency('EUR')">€ EUR</button>
-            <button type="button" class="settings-opt" id="cur-opt-byn" onclick="setCurrency('BYN')">Br BYN</button>
+            <button type="button" class="settings-opt" id="cur-opt-rub" onclick="setCurrency('RUB')">
+              <span class="cur-symbol">₽</span> <span data-i18n="cur.rub">Рубль</span>
+            </button>
+            <button type="button" class="settings-opt" id="cur-opt-usd" onclick="setCurrency('USD')">
+              <span class="cur-symbol">$</span> <span data-i18n="cur.usd">Доллар</span>
+            </button>
+            <button type="button" class="settings-opt" id="cur-opt-eur" onclick="setCurrency('EUR')">
+              <span class="cur-symbol">€</span> <span data-i18n="cur.eur">Евро</span>
+            </button>
+            <button type="button" class="settings-opt" id="cur-opt-byn" onclick="setCurrency('BYN')">
+              <span class="cur-symbol">Br</span> <span data-i18n="cur.byn">Бел. рубль</span>
+            </button>
           </div>
         </div>
 
@@ -687,6 +1004,10 @@
         if (sessionToken) {
           headers['Authorization'] = 'Bearer ' + sessionToken;
           headers['x-session-token'] = sessionToken;
+        }
+        if (currentUser) {
+          if (currentUser.id) headers['x-user-id'] = currentUser.id;
+          if (currentUser.email) headers['x-user-email'] = currentUser.email;
         }
         return headers;
       }
@@ -895,16 +1216,25 @@
           localStorage.removeItem('vw_user');
           localStorage.removeItem('vw_local_user');
           localStorage.removeItem('vw_session_token');
+          if (window.VWAuth) window.VWAuth.setUser(null);
         } else {
           localStorage.setItem('vw_user', JSON.stringify(user));
           localStorage.setItem('vw_local_user', JSON.stringify(user));
+          if (window.VWAuth) window.VWAuth.setUser(user, sessionToken);
         }
       }
 
+      function tr(key, fallback = '') {
+        if (window.VWSettings && typeof window.VWSettings.t === 'function') {
+          return window.VWSettings.t(key);
+        }
+        return fallback || key;
+      }
+
       async function loadCabinetData() {
-        // 1. Сначала читаем сохранённого пользователя из localStorage (мгновенно для GitHub Pages и офлайна)
-        currentUser = getStoredUser();
-        sessionToken = localStorage.getItem('vw_session_token') || (currentUser ? 'token_local' : '');
+        // 1. Мгновенно читаем пользователя для бесшовной синхронизации между вкладками
+        currentUser = (window.VWAuth ? window.VWAuth.getUser() : null) || getStoredUser();
+        sessionToken = localStorage.getItem('vw_session_token') || (currentUser ? 'token_' + currentUser.id : '');
 
         // 2. Читаем сохранённые заказы и отклики
         try {
@@ -917,6 +1247,20 @@
           cabinetData.works = [];
         }
 
+        // 3. Если сессия есть, но currentUser отсутствует в локальном хранилище, восстанавливаем с сервера
+        if (!currentUser && sessionToken) {
+          try {
+            const meRes = await fetch('/api/auth/me', { headers: getAuthHeaders() });
+            if (meRes.ok) {
+              const meData = await meRes.json();
+              if (meData && meData.user) {
+                currentUser = meData.user;
+                saveStoredUser(currentUser);
+              }
+            }
+          } catch (_) {}
+        }
+
         if (currentUser) {
           showAuthView();
           renderCabinet();
@@ -924,9 +1268,14 @@
           showUnauthView();
         }
 
-        // 3. Если есть бэкенд, пробуем фоновую синхронизацию
-        if (sessionToken) {
+        // 4. Синхронизируем с сервером
+        if (currentUser && sessionToken) {
           try {
+            await fetch('/api/auth/sync', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+              body: JSON.stringify({ user: currentUser, token: sessionToken })
+            });
             const res = await fetch('/api/user/cabinet', { headers: getAuthHeaders() });
             if (res.ok) {
               const data = await res.json();
@@ -941,18 +1290,39 @@
                 renderCabinet();
               }
             }
-          } catch (netErr) {
-            // На статическом хостинге (GitHub Pages) остаёмся авторизованными через localStorage
-          }
+          } catch (netErr) {}
         }
       }
+
+      // Realtime cross-tab and cross-page synchronization listeners
+      window.addEventListener('vw:auth-changed', (e) => {
+        currentUser = e.detail?.user || null;
+        sessionToken = localStorage.getItem('vw_session_token') || (currentUser ? 'token_' + currentUser.id : '');
+        if (currentUser) {
+          showAuthView();
+          renderCabinet();
+        } else {
+          showUnauthView();
+        }
+      });
+
+      window.addEventListener('vw:lang-changed', (e) => {
+        currentLang = e.detail?.lang || currentLang;
+        applyTranslations();
+        if (currentUser) {
+          renderCabinet();
+        } else {
+          showUnauthView();
+        }
+      });
 
       function showUnauthView() {
         document.getElementById('unauth-view').style.display = 'block';
         document.getElementById('auth-view').style.display = 'none';
+        const loginText = currentLang === 'ru' ? 'Войти на биржу' : 'Sign in to exchange';
         document.getElementById('auth-nav-container').innerHTML = `
           <button class="btn-auth-open" onclick="window.location.href='index.html'">
-            Войти на биржу
+            ${loginText}
           </button>`;
       }
 
@@ -963,12 +1333,15 @@
 
       function renderCabinet() {
         if (!currentUser) return;
-
+        const isRu = currentLang === 'ru';
         const handle = currentUser.username || currentUser.name;
+        const logoutText = isRu ? 'Выйти' : 'Log out';
+
         // Навбар
+        const displayNameFormatted = (window.formatDisplayName ? window.formatDisplayName(currentUser.name, currentUser.username) : currentUser.name) || currentUser.name;
         document.getElementById('auth-nav-container').innerHTML = `
-          <span style="font-size: 14px; font-weight: 600; color: var(--accent);">@${escapeHtml(handle)}</span>
-          <button class="btn-profile-action danger" onclick="logout()" style="padding: 7px 12px; font-size: 12px;">Выйти</button>
+          <span style="font-size: 14px; font-weight: 600; color: var(--accent);">${escapeHtml(displayNameFormatted)}</span>
+          <button class="btn-profile-action danger" onclick="logout()" style="padding: 7px 12px; font-size: 12px;">${logoutText}</button>
         `;
 
         // Профиль
@@ -982,11 +1355,14 @@
         document.getElementById('cab-name').textContent = currentUser.name;
         document.getElementById('cab-username').textContent = '@' + (currentUser.username || 'user');
 
-        const roleText = currentUser.roleKey === 'client' ? '🎯 Заказчик' : '💼 Исполнитель';
+        const roleText = currentUser.roleKey === 'client'
+          ? (isRu ? '🎯 Заказчик' : '🎯 Client')
+          : (isRu ? '💼 Исполнитель' : '💼 Freelancer');
         document.getElementById('cab-role').textContent = roleText;
+
         document.getElementById('role-toggle-text').textContent = currentUser.roleKey === 'client'
-          ? 'Переключить на Исполнителя'
-          : 'Переключить на Заказчика';
+          ? (isRu ? 'Переключить на Исполнителя' : 'Switch to Freelancer')
+          : (isRu ? 'Переключить на Заказчика' : 'Switch to Client');
 
         if (currentUser.about) {
           document.getElementById('cab-about-box').style.display = 'block';
@@ -1009,34 +1385,41 @@
 
       function renderOrdersList() {
         const container = document.getElementById('cab-orders-list');
+        const isRu = currentLang === 'ru';
         if (!cabinetData.orders || cabinetData.orders.length === 0) {
           container.innerHTML = `
             <div class="empty-state-box">
               <div class="empty-state-icon">📋</div>
-              <div class="empty-state-title">У вас пока нет активных заказов</div>
-              <div class="empty-state-desc">Разместите простое онлайн-задание, чтобы найти ответственного исполнителя среди подростков.</div>
+              <div class="empty-state-title">${tr('cab.emptyOrders')}</div>
+              <div class="empty-state-desc">${tr('cab.emptyOrdersDesc')}</div>
               <a href="2 - объявление.html" class="btn-submit" style="display: inline-block; width: auto; padding: 11px 24px; text-decoration: none;">
-                Разместить первый заказ
+                ${tr('cab.postFirstOrder')}
               </a>
             </div>
           `;
           return;
         }
 
+        const catLabel = isRu ? 'Категория:' : 'Category:';
+        const pubLabel = isRu ? 'Опубликовано:' : 'Published:';
+        const statusLabel = isRu ? '● Открыто для откликов' : '● Open for applications';
+        const dateLocale = isRu ? 'ru-RU' : 'en-US';
+
         container.innerHTML = cabinetData.orders.map(task => {
+          const categoryName = window.translateCategory ? window.translateCategory(task.category) : task.category;
           return `
             <div class="cab-item-card">
               <div class="cab-item-header">
                 <div>
                   <h3 class="cab-item-title">${escapeHtml(task.title)}</h3>
-                  <div style="font-size: 12px; color: var(--accent); margin-top: 3px;">Категория: ${escapeHtml(task.category)}</div>
+                  <div style="font-size: 12px; color: var(--accent); margin-top: 3px;">${catLabel} ${escapeHtml(categoryName)}</div>
                 </div>
                 <span class="cab-item-price">${formatPrice(task.budget)}</span>
               </div>
               <p class="cab-item-desc">${escapeHtml(task.description)}</p>
               <div class="cab-item-footer">
-                <span>Опубликовано: ${new Date(task.createdAt).toLocaleDateString('ru-RU')}</span>
-                <span style="color: var(--accent); font-weight: 600;">● Открыто для откликов</span>
+                <span>${pubLabel} ${new Date(task.createdAt).toLocaleDateString(dateLocale)}</span>
+                <span style="color: var(--accent); font-weight: 600;">${statusLabel}</span>
               </div>
             </div>
           `;
@@ -1045,21 +1428,30 @@
 
       function renderWorksList() {
         const container = document.getElementById('cab-works-list');
+        const isRu = currentLang === 'ru';
         if (!cabinetData.works || cabinetData.works.length === 0) {
           container.innerHTML = `
             <div class="empty-state-box">
               <div class="empty-state-icon">💼</div>
-              <div class="empty-state-title">Вы пока не откликались на задания</div>
-              <div class="empty-state-desc">Перейдите в каталог свежих заданий, выбирайте интересные проекты и начинайте зарабатывать первые деньги.</div>
+              <div class="empty-state-title">${tr('cab.emptyWorks')}</div>
+              <div class="empty-state-desc">${tr('cab.emptyWorksDesc')}</div>
               <a href="index.html#tasks" class="btn-submit" style="display: inline-block; width: auto; padding: 11px 24px; text-decoration: none;">
-                Смотреть свежие задания
+                ${tr('cab.goToFeed')}
               </a>
             </div>
           `;
           return;
         }
 
+        const contactLabel = isRu ? 'Связь с заказчиком:' : 'Client contact:';
+        const sentLabel = isRu ? 'Отклик отправлен:' : 'Application sent:';
+        const inProgress = isRu ? 'В работе' : 'In progress';
+        const dateLocale = isRu ? 'ru-RU' : 'en-US';
+
         container.innerHTML = cabinetData.works.map(item => {
+          const statusDisplay = isRu
+            ? (item.statusText || inProgress)
+            : (item.status === 'done' || item.statusText === 'Выполнено' ? 'Completed' : 'In progress');
           return `
             <div class="cab-item-card">
               <div class="cab-item-header">
@@ -1067,11 +1459,11 @@
                 <span class="cab-item-price">${escapeHtml(item.budget)}</span>
               </div>
               <div class="cab-item-desc">
-                Связь с заказчиком: <strong>${escapeHtml(item.applicantContact)}</strong>
+                ${contactLabel} <strong>${escapeHtml(item.applicantContact)}</strong>
               </div>
               <div class="cab-item-footer">
-                <span>Отклик отправлен: ${new Date(item.createdAt).toLocaleDateString('ru-RU')}</span>
-                <span style="color: var(--accent); font-weight: 600;">Статус: ${escapeHtml(item.statusText || 'В работе')}</span>
+                <span>${sentLabel} ${new Date(item.createdAt).toLocaleDateString(dateLocale)}</span>
+                <span style="color: var(--accent); font-weight: 600;">${escapeHtml(statusDisplay)}</span>
               </div>
             </div>
           `;
@@ -1091,7 +1483,11 @@
         currentUser.roleKey = nextRole;
         saveStoredUser(currentUser);
         renderCabinet();
-        showToast('Роль изменена на: ' + (nextRole === 'client' ? 'Заказчик' : 'Исполнитель'));
+        const isRu = currentLang === 'ru';
+        const roleLabel = nextRole === 'client'
+          ? (isRu ? 'Заказчик' : 'Client')
+          : (isRu ? 'Исполнитель' : 'Freelancer');
+        showToast((isRu ? 'Роль изменена на: ' : 'Role changed to: ') + roleLabel);
 
         try {
           await fetch('/api/user/role', {
@@ -1115,31 +1511,253 @@
         document.getElementById('edit-profile-modal').classList.remove('active');
       }
 
+      // Real-time Latin-only username filter
+      document.addEventListener('DOMContentLoaded', () => {
+        const uInput = document.getElementById('edit-username');
+        if (uInput) {
+          uInput.addEventListener('input', (e) => {
+            const filtered = e.target.value.replace(/[^a-zA-Z0-9_]/g, '');
+            if (e.target.value !== filtered) {
+              e.target.value = filtered;
+            }
+          });
+        }
+      });
+
       async function handleSaveProfile(e) {
         e.preventDefault();
         if (!currentUser) return;
         const displayName = document.getElementById('edit-name').value.trim();
-        const username = document.getElementById('edit-username').value.trim().replace(/^@/, '');
+        const rawUsername = document.getElementById('edit-username').value.trim().replace(/^@/, '');
         const telegram = document.getElementById('edit-telegram').value.trim();
         const about = document.getElementById('edit-about').value.trim();
 
+        // Strict Latin-only validation
+        if (!/^[a-zA-Z0-9_]{3,20}$/.test(rawUsername)) {
+          showToast(tr('profile.usernameLatinOnly', 'Юзернейм должен быть исключительно на латинице (a-z, 0-9, _ от 3 до 20 символов)'));
+          return;
+        }
+
         if (displayName) currentUser.name = displayName;
-        if (username) currentUser.username = username;
+        currentUser.username = rawUsername;
         currentUser.telegram = telegram;
         currentUser.about = about;
 
         saveStoredUser(currentUser);
+        if (window.VWAuth) window.VWAuth.setUser(currentUser);
         closeEditProfileModal();
         renderCabinet();
-        showToast('Профиль успешно обновлён');
+        showToast(tr('toast.profileSaved'));
+
+        try {
+          const res = await fetch('/api/user/profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+            body: JSON.stringify({ displayName, username: rawUsername, telegram, about })
+          });
+          const data = await res.json();
+          if (data && data.error) {
+            showToast(data.error);
+          }
+        } catch (err) {}
+      }
+
+      // ==========================================
+      // СИСТЕМА АВАТАРОК И КАДРИРОВАНИЯ (CROPPER)
+      // ==========================================
+      let cropImageObj = null;
+      let cropScale = 1;
+      let cropBaseScale = 1;
+      let cropOffsetX = 0;
+      let cropOffsetY = 0;
+      let isDraggingCrop = false;
+      let dragStartX = 0;
+      let dragStartY = 0;
+      let cropListenersAttached = false;
+
+      function triggerAvatarUpload() {
+        const input = document.getElementById('avatar-file-input');
+        if (input) input.click();
+      }
+
+      function handleAvatarFileSelected(e) {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+          showToast(currentLang === 'ru' ? 'Пожалуйста, выберите файл изображения' : 'Please select an image file');
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const img = new Image();
+          img.onload = () => {
+            cropImageObj = img;
+            openAvatarCropModal();
+          };
+          img.onerror = () => {
+            showToast(tr('avatar.errorLoading'));
+          };
+          img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function openAvatarCropModal() {
+        if (!cropImageObj) return;
+        const modal = document.getElementById('avatar-crop-modal');
+        if (!modal) return;
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+
+        const canvas = document.getElementById('crop-canvas');
+        const minDim = Math.min(cropImageObj.width, cropImageObj.height);
+        cropBaseScale = (canvas.width || 280) / minDim;
+        cropScale = 1;
+        cropOffsetX = 0;
+        cropOffsetY = 0;
+
+        const slider = document.getElementById('crop-zoom-slider');
+        if (slider) slider.value = '1';
+
+        initCropCanvasListeners();
+        drawCropCanvas();
+      }
+
+      function closeAvatarCropModal() {
+        const modal = document.getElementById('avatar-crop-modal');
+        if (modal) {
+          modal.classList.remove('active');
+          document.body.style.overflow = '';
+        }
+        const fileInput = document.getElementById('avatar-file-input');
+        if (fileInput) fileInput.value = '';
+        cropImageObj = null;
+      }
+
+      function handleCropSlider(e) {
+        cropScale = parseFloat(e.target.value) || 1;
+        drawCropCanvas();
+      }
+
+      function adjustCropZoom(delta) {
+        const slider = document.getElementById('crop-zoom-slider');
+        let next = cropScale + delta;
+        next = Math.max(1, Math.min(3, next));
+        cropScale = next;
+        if (slider) slider.value = next.toString();
+        drawCropCanvas();
+      }
+
+      function drawCropCanvas() {
+        const canvas = document.getElementById('crop-canvas');
+        if (!canvas || !cropImageObj) return;
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+
+        ctx.clearRect(0, 0, width, height);
+
+        const totalScale = cropBaseScale * cropScale;
+        const drawW = cropImageObj.width * totalScale;
+        const drawH = cropImageObj.height * totalScale;
+
+        const maxOffsetX = Math.max(0, (drawW - width) / 2);
+        const maxOffsetY = Math.max(0, (drawH - height) / 2);
+        cropOffsetX = Math.max(-maxOffsetX, Math.min(maxOffsetX, cropOffsetX));
+        cropOffsetY = Math.max(-maxOffsetY, Math.min(maxOffsetY, cropOffsetY));
+
+        const posX = width / 2 + cropOffsetX;
+        const posY = height / 2 + cropOffsetY;
+
+        ctx.save();
+        ctx.drawImage(
+          cropImageObj,
+          posX - drawW / 2,
+          posY - drawH / 2,
+          drawW,
+          drawH
+        );
+        ctx.restore();
+      }
+
+      function initCropCanvasListeners() {
+        if (cropListenersAttached) return;
+        const viewport = document.getElementById('crop-viewport');
+        if (!viewport) return;
+
+        const onStart = (clientX, clientY) => {
+          isDraggingCrop = true;
+          dragStartX = clientX;
+          dragStartY = clientY;
+        };
+
+        const onMove = (clientX, clientY) => {
+          if (!isDraggingCrop) return;
+          const dx = clientX - dragStartX;
+          const dy = clientY - dragStartY;
+          dragStartX = clientX;
+          dragStartY = clientY;
+          cropOffsetX += dx;
+          cropOffsetY += dy;
+          drawCropCanvas();
+        };
+
+        const onEnd = () => {
+          isDraggingCrop = false;
+        };
+
+        viewport.addEventListener('mousedown', (e) => onStart(e.clientX, e.clientY));
+        window.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
+        window.addEventListener('mouseup', onEnd);
+
+        viewport.addEventListener('touchstart', (e) => {
+          if (e.touches && e.touches[0]) onStart(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: true });
+        window.addEventListener('touchmove', (e) => {
+          if (e.touches && e.touches[0]) onMove(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: true });
+        window.addEventListener('touchend', onEnd);
+
+        viewport.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          const delta = e.deltaY < 0 ? 0.08 : -0.08;
+          adjustCropZoom(delta);
+        }, { passive: false });
+
+        cropListenersAttached = true;
+      }
+
+      async function saveCroppedAvatar() {
+        if (!cropImageObj || !currentUser) return;
+        const srcCanvas = document.getElementById('crop-canvas');
+        if (!srcCanvas) return;
+
+        const exportCanvas = document.createElement('canvas');
+        exportCanvas.width = 256;
+        exportCanvas.height = 256;
+        const eCtx = exportCanvas.getContext('2d');
+
+        eCtx.drawImage(srcCanvas, 0, 0, srcCanvas.width, srcCanvas.height, 0, 0, 256, 256);
+
+        const dataUrl = exportCanvas.toDataURL('image/jpeg', 0.92);
+
+        currentUser.avatar = dataUrl;
+        saveStoredUser(currentUser);
+        if (window.VWAuth) {
+          window.VWAuth.setUser(currentUser);
+        }
+        closeAvatarCropModal();
+        renderCabinet();
+        showToast(tr('avatar.updated'));
 
         try {
           await fetch('/api/user/profile', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-            body: JSON.stringify({ displayName, username, telegram, about })
+            body: JSON.stringify({ avatar: dataUrl })
           });
-        } catch (err) {}
+        } catch (_) {}
       }
 
       // Баланс
@@ -1189,15 +1807,49 @@
         } catch (err) {}
       }
 
-      window.syncFirebaseUser = function(googleData) {
+      window.syncFirebaseUser = async function(googleData) {
+        if (!googleData || !googleData.email) return;
+        try {
+          const res = await fetch('/api/auth/google', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              uid: googleData.uid,
+              email: googleData.email,
+              displayName: googleData.displayName || googleData.name,
+              photoURL: googleData.photoURL
+            })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.user && data.token) {
+              currentUser = data.user;
+              sessionToken = data.token;
+              localStorage.setItem('vw_session_token', sessionToken);
+              saveStoredUser(currentUser);
+              if (window.VWAuth) window.VWAuth.setUser(currentUser, sessionToken);
+              showAuthView();
+              renderCabinet();
+              loadCabinetData();
+              return;
+            }
+          }
+        } catch (err) {
+          console.warn('Backend Google sync failed in cabinet:', err);
+        }
+
         const stored = getStoredUser();
-        if (!stored) {
+        if (stored) {
+          currentUser = stored;
+        } else {
           currentUser = {
             id: 'user_' + googleData.uid,
             name: googleData.displayName || googleData.name || 'Пользователь Google',
             username: (googleData.displayName || googleData.name || 'user').toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 15),
             email: googleData.email || '',
             avatar: googleData.photoURL || '',
+            about: '',
+            telegram: '',
             roleKey: 'worker',
             balance: 0,
             createdAt: new Date().toISOString()
@@ -1205,12 +1857,6 @@
           sessionToken = 'token_' + Math.random().toString(36).substring(2);
           localStorage.setItem('vw_session_token', sessionToken);
           saveStoredUser(currentUser);
-        } else {
-          currentUser = stored;
-          if (googleData.photoURL && !currentUser.avatar) {
-            currentUser.avatar = googleData.photoURL;
-            saveStoredUser(currentUser);
-          }
         }
         showAuthView();
         renderCabinet();
@@ -1290,8 +1936,17 @@
         showToast('Вы вышли из аккаунта');
       }
 
-      function openSettingsModal() { updateSettingsUI(); document.getElementById('settings-modal').classList.add('active'); }
-      function closeSettingsModal() { document.getElementById('settings-modal').classList.remove('active'); }
+      function openSettingsModal() {
+        updateSettingsUI();
+        const m = document.getElementById('settings-modal');
+        if (m) m.classList.add('active');
+        document.body.style.overflow = 'hidden';
+      }
+      function closeSettingsModal() {
+        const m = document.getElementById('settings-modal');
+        if (m) m.classList.remove('active');
+        document.body.style.overflow = '';
+      }
 
       let toastTimer = null;
       function showToast(text) {
